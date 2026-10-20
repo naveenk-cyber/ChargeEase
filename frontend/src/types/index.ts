@@ -3,6 +3,10 @@ export interface ChargingStation {
   id: string;
   name: string;
   address: string;
+  /** City is optional because older API payloads only carried a full address. */
+  city?: string;
+  postcode?: string;
+  operator?: string;
   latitude: number;
   longitude: number;
   rating: number;
@@ -16,9 +20,13 @@ export interface ChargingStation {
   images: string[];
   operatingHours: OperatingHours;
   hostType: 'Tesla' | 'ChargePoint' | 'EVgo' | 'Electrify America' | 'Other';
+  /** `sample` marks bundled demo data, so the UI can label it honestly. */
+  dataSource?: 'database' | 'sample';
+  lastSyncedAt?: string;
 }
 
 export interface ConnectorType {
+  id?: string;
   type: 'J1772' | 'CCS' | 'CHAdeMO' | 'Tesla' | 'Type 2';
   maxPower: number; // in kW
   available: boolean;
@@ -113,7 +121,11 @@ export interface PaymentMethod {
 }
 
 // Search Types
+export type SearchSort = 'distance' | 'price' | 'rating' | 'speed' | 'name';
+
 export interface SearchFilters {
+  /** Free-text query matched against name, address, city and operator. */
+  query?: string;
   location?: {
     latitude: number;
     longitude: number;
@@ -122,6 +134,7 @@ export interface SearchFilters {
   chargingSpeed?: ChargingSpeed[];
   connectorTypes?: string[];
   amenities?: string[];
+  operators?: string[];
   availability?: boolean;
   priceRange?: {
     min: number;
@@ -129,6 +142,7 @@ export interface SearchFilters {
   };
   rating?: number;
   hostTypes?: string[];
+  sort?: SearchSort;
 }
 
 export interface SearchResult {
@@ -137,6 +151,16 @@ export interface SearchResult {
   page: number;
   limit: number;
   hasMore: boolean;
+  /** `demo` means the API was unreachable and bundled sample data was used. */
+  source?: 'database' | 'demo';
+}
+
+export interface FilterMeta {
+  operators: string[];
+  connectorTypes: string[];
+  chargingSpeeds: string[];
+  amenities: string[];
+  priceRange: { min: number; max: number };
 }
 
 // Analytics Types
@@ -199,11 +223,15 @@ export interface LoginForm {
 }
 
 export interface SignupForm {
-  name: string;
+  /** Either a single display name or the split fields used by the form. */
+  name?: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   password: string;
-  confirmPassword: string;
+  confirmPassword?: string;
   phone?: string;
+  newsletter?: boolean;
   agreeToTerms: boolean;
 }
 

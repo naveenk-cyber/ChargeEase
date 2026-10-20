@@ -11,7 +11,6 @@ import {
   MapPin,
   Car,
   CreditCard,
-  Settings,
   Bell,
   Shield,
   Edit3,
@@ -28,7 +27,6 @@ import {
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
-import { useAuth } from '../hooks/useAuth';
 
 const profileSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -47,7 +45,6 @@ const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [isLoading, setIsLoading] = useState(false);
-  const { user } = useAuth();
 
   // Mock user data - replace with actual user data
   const mockUser = {
@@ -105,7 +102,7 @@ const ProfilePage: React.FC = () => {
       label: 'Carbon Offset',
       value: `${mockUser.carbonOffset} lbs`,
       change: '+22%',
-      color: 'from-orange-500 to-red-500'
+      color: 'from-brand to-brand-strong'
     },
   ];
 

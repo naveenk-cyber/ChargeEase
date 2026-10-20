@@ -1,0 +1,281 @@
+'use strict';
+
+const fs = require('node:fs');
+const path = require('node:path');
+const { DatabaseSync } = require('node:sqlite');
+
+/**
+ * Ordered, idempotent migrations. Applied in `version` order and recorded in
+ * `schema_migrations`, so running the server twice is safe.
+ */
+const MIGRATIONS = [
+  {
+    version: 1,
+    name: 'core_schema',
+    sql: `
+      CREATE TABLE users (
+        id                TEXT PRIMARY KEY,
+        email             TEXT NOT NULL UNIQUE,
+        password_hash     TEXT NOT NULL,
+        name              TEXT NOT NULL,
+        phone             TEXT,
+        avatar            TEXT,
+        membership_level  TEXT NOT NULL DEFAULT 'Free',
+        preferences_json  TEXT NOT NULL DEFAULT '{}',
+        created_at        TEXT NOT NULL,
+        updated_at        TEXT NOT NULL
+      );
+
+      CREATE TABLE auth_sessions (
+        id          TEXT PRIMARY KEY,
+        user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        expires_at  TEXT NOT NULL,
+        revoked     INTEGER NOT NULL DEFAULT 0,
+        created_at  TEXT NOT NULL
+      );
+      CREATE INDEX idx_auth_sessions_user ON auth_sessions(user_id);
+
+      CREATE TABLE password_resets (
+        token_hash  TEXT PRIMARY KEY,
+        user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        expires_at  TEXT NOT NULL,
+        used        INTEGER NOT NULL DEFAULT 0,
+        created_at  TEXT NOT NULL
+      );
+
+      CREATE TABLE stations (
+        id                 TEXT PRIMARY KEY,
+        name               TEXT NOT NULL,
+        address            TEXT NOT NULL,
+        city               TEXT,
+        postcode           TEXT,
+        latitude           REAL NOT NULL,
+        longitude          REAL NOT NULL,
+        operator           TEXT NOT NULL,
+        host_type          TEXT NOT NULL,
+        charging_speed     TEXT NOT NULL,
+        status             TEXT NOT NULL DEFAULT 'Available',
+        amenities_json     TEXT NOT NULL DEFAULT '[]',
+        opening_hours_json TEXT NOT NULL DEFAULT '{}',
+        price_per_kwh      REAL,
+        price_per_minute   REAL,
+        session_fee        REAL,
+        currency           TEXT NOT NULL DEFAULT 'USD',
+        images_json        TEXT NOT NULL DEFAULT '[]',
+        data_source        TEXT NOT NULL DEFAULT 'sample',
+        last_synced_at     TEXT,
+        created_at         TEXT NOT NULL,
+        updated_at         TEXT NOT NULL
+      );
+      CREATE INDEX idx_stations_city ON stations(city);
+      CREATE INDEX idx_stations_geo ON stations(latitude, longitude);
+      CREATE INDEX idx_stations_operator ON stations(operator);
+
+      CREATE TABLE connectors (
+        id           TEXT PRIMARY KEY,
+        station_id   TEXT NOT NULL REFERENCES stations(id) ON DELETE CASCADE,
+        type         TEXT NOT NULL,
+        max_power_kw REAL NOT NULL,
+        count        INTEGER NOT NULL DEFAULT 1,
+        available    INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE INDEX idx_connectors_station ON connectors(station_id);
+
+      CREATE TABLE favorites (
+        user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        station_id TEXT NOT NULL REFERENCES stations(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (user_id, station_id)
+      );
+
+      CREATE TABLE reviews (
+        id         TEXT PRIMARY KEY,
+        station_id TEXT NOT NULL REFERENCES stations(id) ON DELETE CASCADE,
+        user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        rating     INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+        title      TEXT NOT NULL,
+        comment    TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE (station_id, user_id)
+      );
+      CREATE INDEX idx_reviews_station ON reviews(station_id);
+
+      CREATE TABLE vehicles (
+        id                   TEXT PRIMARY KEY,
+        user_id              TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        make                 TEXT NOT NULL,
+        model                TEXT NOT NULL,
+        year                 INTEGER,
+        battery_capacity_kwh REAL,
+        connector_types_json TEXT NOT NULL DEFAULT '[]',
+        estimated_range_km   REAL,
+        is_default           INTEGER NOT NULL DEFAULT 0,
+        created_at           TEXT NOT NULL,
+        updated_at           TEXT NOT NULL
+      );
+      CREATE INDEX idx_vehicles_user ON vehicles(user_id);
+
+      CREATE TABLE bookings (
+        id               TEXT PRIMARY KEY,
+        user_id          TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        station_id       TEXT NOT NULL REFERENCES stations(id) ON DELETE CASCADE,
+        connector_type   TEXT NOT NULL,
+        start_time       TEXT NOT NULL,
+        end_time         TEXT NOT NULL,
+        duration_minutes INTEGER NOT NULL,
+        status           TEXT NOT NULL DEFAULT 'confirmed',
+        estimated_cost   REAL NOT NULL DEFAULT 0,
+        energy_kwh       REAL,
+        currency         TEXT NOT NULL DEFAULT 'USD',
+        simulated        INTEGER NOT NULL DEFAULT 1,
+        created_at       TEXT NOT NULL,
+        updated_at       TEXT NOT NULL
+      );
+      CREATE INDEX idx_bookings_user_start ON bookings(user_id, start_time);
+      CREATE INDEX idx_bookings_station_start ON bookings(station_id, start_time);
+
+      CREATE TABLE charging_sessions (
+        id                 TEXT PRIMARY KEY,
+        booking_id         TEXT REFERENCES bookings(id) ON DELETE SET NULL,
+        user_id            TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        station_id         TEXT NOT NULL REFERENCES stations(id) ON DELETE CASCADE,
+        connector_type     TEXT NOT NULL,
+        started_at         TEXT NOT NULL,
+        ended_at           TEXT,
+        energy_kwh         REAL NOT NULL DEFAULT 0,
+        cost               REAL NOT NULL DEFAULT 0,
+        currency           TEXT NOT NULL DEFAULT 'USD',
+        simulated          INTEGER NOT NULL DEFAULT 1,
+        operator_confirmed INTEGER NOT NULL DEFAULT 0,
+        created_at         TEXT NOT NULL
+      );
+      CREATE INDEX idx_sessions_user_started ON charging_sessions(user_id, started_at);
+
+      CREATE TABLE wallets (
+        id            TEXT PRIMARY KEY,
+        user_id       TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        balance_minor INTEGER NOT NULL DEFAULT 0,
+        currency      TEXT NOT NULL DEFAULT 'USD',
+        simulated     INTEGER NOT NULL DEFAULT 1,
+        updated_at    TEXT NOT NULL
+      );
+
+      CREATE TABLE wallet_transactions (
+        id                  TEXT PRIMARY KEY,
+        wallet_id           TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+        user_id             TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type                TEXT NOT NULL,
+        amount_minor        INTEGER NOT NULL,
+        balance_after_minor INTEGER NOT NULL,
+        description         TEXT NOT NULL,
+        reference           TEXT,
+        simulated           INTEGER NOT NULL DEFAULT 1,
+        created_at          TEXT NOT NULL
+      );
+      CREATE INDEX idx_wallet_tx_user ON wallet_transactions(user_id, created_at);
+    `,
+  },
+];
+
+function openDatabase(file) {
+  if (file !== ':memory:') {
+    fs.mkdirSync(path.dirname(path.resolve(file)), { recursive: true });
+  }
+  const db = new DatabaseSync(file);
+  db.exec('PRAGMA foreign_keys = ON;');
+  db.exec('PRAGMA journal_mode = WAL;');
+  return db;
+}
+
+function migrate(db) {
+  db.exec(
+    'CREATE TABLE IF NOT EXISTS schema_migrations (' +
+      'version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL);',
+  );
+
+  const applied = new Set(
+    db.prepare('SELECT version FROM schema_migrations').all().map((row) => row.version),
+  );
+
+  for (const migration of MIGRATIONS) {
+    if (applied.has(migration.version)) continue;
+    db.exec('BEGIN');
+    try {
+      db.exec(migration.sql);
+      db.prepare(
+        'INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)',
+      ).run(migration.version, migration.name, new Date().toISOString());
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+  }
+  return db;
+}
+
+/** Track databases with an open transaction so nesting uses savepoints. */
+const activeTransactions = new WeakSet();
+
+/**
+ * Run `fn` inside a transaction, rolling back on any thrown error.
+ * Nested calls use SAVEPOINTs so helper functions can be composed safely.
+ */
+function transaction(db, fn) {
+  if (activeTransactions.has(db)) {
+    const name = `sp_${Math.random().toString(36).slice(2, 10)}`;
+    db.exec(`SAVEPOINT ${name}`);
+    try {
+      const result = fn();
+      db.exec(`RELEASE ${name}`);
+      return result;
+    } catch (error) {
+      db.exec(`ROLLBACK TO ${name}`);
+      db.exec(`RELEASE ${name}`);
+      throw error;
+    }
+  }
+
+  activeTransactions.add(db);
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const result = fn();
+    db.exec('COMMIT');
+    return result;
+  } catch (error) {
+    try {
+      db.exec('ROLLBACK');
+    } catch {
+      // Transaction was already rolled back.
+    }
+    throw error;
+  } finally {
+    activeTransactions.delete(db);
+  }
+}
+
+let shared = null;
+
+/** Lazily create a single process-wide database handle. */
+function getDatabase(file = null) {
+  if (!shared) {
+    const target = file || require('./config').databaseFile;
+    shared = migrate(openDatabase(target));
+  }
+  return shared;
+}
+
+/** Test helper: build an isolated in-memory database with the schema applied. */
+function createMemoryDatabase() {
+  return migrate(openDatabase(':memory:'));
+}
+
+module.exports = {
+  MIGRATIONS,
+  openDatabase,
+  migrate,
+  transaction,
+  getDatabase,
+  createMemoryDatabase,
+};

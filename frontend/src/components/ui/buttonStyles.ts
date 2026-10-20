@@ -1,0 +1,67 @@
+/**
+ * Shared button styling.
+ *
+ * `Button` (a real `<button>`) and `ButtonLink` (a real `<a>` for navigation)
+ * both build their classes here, so a link that looks like a button can never
+ * drift from the button it stands in for — and we never nest an interactive
+ * control inside another one.
+ */
+
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'ghost'
+  | 'outline'
+  | 'danger'
+  | 'destructive'
+  | 'gradient'
+  | 'glass';
+
+export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl' | 'icon';
+
+const BASE =
+  'inline-flex items-center justify-center whitespace-nowrap font-semibold rounded-full ' +
+  'transition-[background-color,border-color,color,box-shadow,transform] duration-200 ' +
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ' +
+  'focus-visible:ring-offset-canvas disabled:opacity-45 disabled:cursor-not-allowed ' +
+  'active:translate-y-px';
+
+const VARIANTS: Record<ButtonVariant, string> = {
+  // The one saturated action colour on the site.
+  primary: 'bg-brand text-on-accent hover:bg-brand-strong shadow-[0_12px_30px_-12px_rgb(255_90_31/0.55)]',
+  gradient: 'bg-brand text-on-accent hover:bg-brand-strong shadow-[0_12px_30px_-12px_rgb(255_90_31/0.55)]',
+  // Quiet, elevated secondary.
+  secondary: 'bg-surface-muted text-ink border border-line-strong hover:bg-[#202428] hover:border-[#4b5158]',
+  ghost: 'bg-transparent text-ink border border-line-strong hover:bg-surface-muted hover:border-brand/60',
+  glass: 'bg-white/10 border border-white/20 text-deep-ink hover:bg-white/16',
+  outline: 'bg-transparent border border-brand/55 text-brand hover:bg-brand-soft hover:border-brand',
+  danger: 'bg-error text-[#1b0b0b] hover:brightness-95',
+  destructive: 'bg-error-soft text-error-ink border border-error/35 hover:bg-error/20',
+};
+
+// Payoneer's buttons sit around 9px vertical padding with a wide horizontal
+// rhythm. These keep the generous marketing CTAs and the denser toolbars on
+// the same scale.
+const SIZES: Record<ButtonSize, string> = {
+  sm: 'h-9 px-4 text-[0.8125rem] gap-1.5',
+  md: 'h-11 px-5 text-sm gap-2',
+  lg: 'h-12 px-7 text-[0.9375rem] gap-2',
+  xl: 'h-14 px-8 text-base gap-2.5',
+  icon: 'h-10 w-10 p-0',
+};
+
+export function buttonClasses({
+  variant = 'primary',
+  size = 'md',
+  fullWidth = false,
+  className = '',
+}: {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  fullWidth?: boolean;
+  className?: string;
+} = {}): string {
+  return [BASE, VARIANTS[variant], SIZES[size], fullWidth ? 'w-full' : '', className]
+    .filter(Boolean)
+    .join(' ');
+}

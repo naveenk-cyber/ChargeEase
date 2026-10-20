@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useId, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -7,125 +7,105 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   helperText?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
-  variant?: 'default' | 'filled' | 'outlined';
   showPasswordToggle?: boolean;
 }
 
-const Input = forwardRef<HTMLInputElement, InputProps>(({
-  label,
-  error,
-  helperText,
-  leftIcon,
-  rightIcon,
-  variant = 'default',
-  showPasswordToggle = false,
-  className = '',
-  type = 'text',
-  id,
-  ...props
-}, ref) => {
-  const [showPassword, setShowPassword] = React.useState(false);
-  const [isFocused, setIsFocused] = React.useState(false);
-  
-  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
-  const inputType = showPasswordToggle && type === 'password' 
-    ? (showPassword ? 'text' : 'password') 
-    : type;
+const Input = forwardRef<HTMLInputElement, InputProps>(
+  (
+    {
+      label,
+      error,
+      helperText,
+      leftIcon,
+      rightIcon,
+      showPasswordToggle = false,
+      className = '',
+      type = 'text',
+      id,
+      ...props
+    },
+    ref,
+  ) => {
+    const generatedId = useId();
+    const inputId = id || `input-${generatedId}`;
+    const errorId = `${inputId}-error`;
+    const helperId = `${inputId}-helper`;
+    const [showPassword, setShowPassword] = useState(false);
 
-  const baseClasses = [
-    'w-full transition-all duration-200 outline-none',
-    'disabled:opacity-50 disabled:cursor-not-allowed'
-  ];
+    const inputType = showPasswordToggle && type === 'password' && showPassword ? 'text' : type;
 
-  const variantClasses = {
-    default: [
-      'border-b-2 bg-transparent pb-2',
-      error ? 'border-red-500' : isFocused ? 'border-orange-500' : 'border-gray-300',
-      'focus:border-orange-500'
-    ],
-    filled: [
-      'bg-gray-100 border border-gray-300 rounded-lg px-4 py-2',
-      error ? 'border-red-500 bg-red-50' : isFocused ? 'border-orange-500 bg-orange-50' : '',
-      'focus:border-orange-500 focus:bg-orange-50',
-      'dark:bg-gray-800 dark:border-gray-600',
-      'dark:focus:bg-gray-700 dark:focus:border-orange-500'
-    ],
-    outlined: [
-      'border-2 rounded-lg px-4 py-2',
-      error ? 'border-red-500' : isFocused ? 'border-orange-500' : 'border-gray-300',
-      'focus:border-orange-500',
-      'dark:border-gray-600 dark:focus:border-orange-500'
-    ]
-  };
-
-  const inputClasses = [
-    ...baseClasses,
-    ...variantClasses[variant],
-    leftIcon ? 'pl-10' : '',
-    (rightIcon || showPasswordToggle) ? 'pr-10' : '',
-    className
-  ].join(' ');
-
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-
-  return (
-    <div className="w-full">
-      {label && (
-        <label 
-          htmlFor={inputId}
-          className={`block text-sm font-medium mb-2 transition-colors ${
-            error ? 'text-red-600' : isFocused ? 'text-orange-600' : 'text-gray-700 dark:text-gray-300'
-          }`}
-        >
-          {label}
-        </label>
-      )}
-      
-      <div className="relative">
-        {leftIcon && (
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            {leftIcon}
-          </div>
+    return (
+      <div className="w-full">
+        {label && (
+          <label
+            htmlFor={inputId}
+            className="mb-2 block text-[0.8125rem] font-medium text-ink-muted"
+          >
+            {label}
+          </label>
         )}
-        
-        <input
-          ref={ref}
-          type={inputType}
-          id={inputId}
-          className={inputClasses}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          {...props}
-        />
-        
-        {(rightIcon || showPasswordToggle) && (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-            {showPasswordToggle && type === 'password' ? (
-              <button
-                type="button"
-                onClick={togglePasswordVisibility}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            ) : (
-              rightIcon && <div className="text-gray-400">{rightIcon}</div>
-            )}
-          </div>
+
+        <div className="relative">
+          {leftIcon && (
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle [&>svg]:h-4 [&>svg]:w-4">
+              {leftIcon}
+            </span>
+          )}
+
+          <input
+            ref={ref}
+            id={inputId}
+            type={inputType}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? errorId : helperText ? helperId : undefined}
+            className={[
+              'h-11 w-full rounded-control border bg-surface-muted text-sm text-ink',
+              'placeholder:text-ink-subtle transition-colors duration-200',
+              'focus:outline-none focus:ring-2 focus:ring-brand/30',
+              error
+                ? 'border-error/60 focus:border-error'
+                : 'border-line-strong hover:border-[#4b5158] focus:border-brand',
+              leftIcon ? 'pl-10' : 'pl-3.5',
+              rightIcon || showPasswordToggle ? 'pr-10' : 'pr-3.5',
+              'disabled:cursor-not-allowed disabled:opacity-55',
+              className,
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            {...props}
+          />
+
+          {(rightIcon || (showPasswordToggle && type === 'password')) && (
+            <span className="absolute right-2 top-1/2 -translate-y-1/2">
+              {showPasswordToggle && type === 'password' ? (
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="grid h-8 w-8 place-items-center rounded-full text-ink-subtle transition-colors hover:bg-white/5 hover:text-ink focus-visible:ring-2 focus-visible:ring-brand"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              ) : (
+                <span className="pr-2 text-ink-subtle [&>svg]:h-4 [&>svg]:w-4">{rightIcon}</span>
+              )}
+            </span>
+          )}
+        </div>
+
+        {(error || helperText) && (
+          <p
+            id={error ? errorId : helperId}
+            role={error ? 'alert' : undefined}
+            className={`mt-1.5 text-xs ${error ? 'text-error-ink' : 'text-ink-subtle'}`}
+          >
+            {error || helperText}
+          </p>
         )}
       </div>
-      
-      {(error || helperText) && (
-        <div className={`mt-1 text-sm ${error ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>
-          {error || helperText}
-        </div>
-      )}
-    </div>
-  );
-});
+    );
+  },
+);
 
 Input.displayName = 'Input';
 

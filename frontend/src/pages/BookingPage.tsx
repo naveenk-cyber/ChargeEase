@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Calendar,
@@ -9,7 +9,6 @@ import {
   Zap,
   DollarSign,
   ArrowLeft,
-  Filter,
   Search,
   Plus,
   MoreVertical,
@@ -22,16 +21,12 @@ import { Booking } from '../types';
 import { formatPrice, formatDate } from '../utils/helpers';
 
 const BookingPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Get station ID from URL params if booking from station details
-  const stationId = searchParams.get('stationId');
 
   useEffect(() => {
     // Mock bookings data
@@ -57,8 +52,8 @@ const BookingPage: React.FC = () => {
           operatingHours: { isOpen24Hours: true },
           hostType: 'Tesla'
         },
-        startTime: new Date(Date.now() , 3600000).toISOString(), // 1 hour from now
-        endTime: new Date(Date.now() , 7200000).toISOString(), // 2 hours from now
+        startTime: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
+        endTime: new Date(Date.now() + 7200000).toISOString(), // 2 hours from now
         duration: 60,
         connectorType: 'Tesla',
         status: 'Confirmed',
@@ -118,8 +113,8 @@ const BookingPage: React.FC = () => {
           operatingHours: { isOpen24Hours: true },
           hostType: 'EVgo'
         },
-        startTime: new Date(Date.now() , 86400000).toISOString(), // Tomorrow
-        endTime: new Date(Date.now() , 90000000).toISOString(),
+        startTime: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
+        endTime: new Date(Date.now() + 90000000).toISOString(),
         duration: 60,
         connectorType: 'CHAdeMO',
         status: 'Confirmed',
@@ -170,10 +165,10 @@ const BookingPage: React.FC = () => {
     const now = new Date();
     const start = new Date(startTime);
     
-    if (status === 'Cancelled') return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
-    if (status === 'Completed') return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
-    if (start > now) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
-    return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400';
+    if (status === 'Cancelled') return 'status-offline';
+    if (status === 'Completed') return 'status-available';
+    if (start > now) return 'border border-line bg-surface-muted text-ink-muted';
+    return 'status-busy';
   };
 
   const getStatusText = (status: string, startTime: string) => {
@@ -190,14 +185,14 @@ const BookingPage: React.FC = () => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+      className="rounded-card border border-line bg-surface p-5 shadow-card hover:shadow-lg transition-shadow"
     >
       <div className="flex justify-between items-start mb-4">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+          <h3 className="text-lg font-semibold text-ink mb-1">
             {booking.station.name}
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+          <p className="text-sm text-ink-muted flex items-center">
             <MapPin className="w-4 h-4 mr-1" />
             {booking.station.address}
           </p>
@@ -206,26 +201,26 @@ const BookingPage: React.FC = () => {
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(booking.status, booking.startTime)}`}>
             {getStatusText(booking.status, booking.startTime)}
           </span>
-          <button type='button' className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <button type='button' className="p-1 text-ink-subtle hover:text-gray-600 dark:hover:text-gray-300">
             <MoreVertical className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center space-x-2 text-sm text-ink-muted">
           <Calendar className="w-4 h-4" />
           <span>{formatDate(booking.startTime, 'date')}</span>
         </div>
-        <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center space-x-2 text-sm text-ink-muted">
           <Clock className="w-4 h-4" />
           <span>{formatDate(booking.startTime, 'time')} - {formatDate(booking.endTime, 'time')}</span>
         </div>
-        <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center space-x-2 text-sm text-ink-muted">
           <Zap className="w-4 h-4" />
           <span>{booking.connectorType}</span>
         </div>
-        <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center space-x-2 text-sm text-ink-muted">
           <DollarSign className="w-4 h-4" />
           <span>{formatPrice(booking.totalCost)}</span>
         </div>
@@ -233,8 +228,8 @@ const BookingPage: React.FC = () => {
 
       {booking.energyDelivered && (
         <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Energy delivered: <span className="font-medium text-gray-900 dark:text-white">{booking.energyDelivered} kWh</span>
+          <p className="text-sm text-ink-muted">
+            Energy delivered: <span className="font-medium text-ink">{booking.energyDelivered} kWh</span>
           </p>
         </div>
       )}
@@ -267,33 +262,33 @@ const BookingPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-canvas">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading bookings...</p>
+          <p className="text-ink-muted">Loading bookings...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-canvas">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400"
+              className="flex items-center space-x-2 text-ink-muted hover:text-orange-600 dark:hover:text-orange-400"
             >
               <ArrowLeft className="w-5 h-5" />
               <span>Back</span>
             </button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-3xl font-bold text-ink">
                 My Bookings
               </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
+              <p className="text-ink-muted mt-1">
                 Manage your charging sessions and reservations
               </p>
             </div>
@@ -306,11 +301,11 @@ const BookingPage: React.FC = () => {
         </div>
 
         {/* Filters and Search */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
+        <div className="rounded-card border border-line bg-surface p-5 shadow-card mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
             {/* Search */}
             <div className="relative flex-1 md:max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-ink-subtle w-4 h-4" />
               <input
                 type="text"
                 placeholder="Search stations..."
@@ -321,20 +316,22 @@ const BookingPage: React.FC = () => {
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-              {[
+            <div className="flex flex-wrap gap-y-1 space-x-1 rounded-control border border-line bg-surface-muted p-1">
+              {([
                 { key: 'all', label: 'All' },
                 { key: 'upcoming', label: 'Upcoming' },
                 { key: 'completed', label: 'Completed' },
                 { key: 'cancelled', label: 'Cancelled' }
-              ].map((tab) => (
+              ] as const).map((tab) => (
                 <button
                   key={tab.key}
-                  onClick={() => setFilter(tab.key as any)}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  type="button"
+                  onClick={() => setFilter(tab.key)}
+                  aria-pressed={filter === tab.key}
+                  className={`rounded-[7px] px-3 py-1.5 text-[0.8125rem] font-medium transition-colors ${
                     filter === tab.key
-                      ? 'bg-white dark:bg-gray-600 text-orange-600 dark:text-orange-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      ? 'bg-surface text-brand shadow-sm'
+                      : 'text-ink-muted hover:text-ink'
                   }`}
                 >
                   {tab.label}
@@ -352,12 +349,12 @@ const BookingPage: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-12 text-center">
-            <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
+          <div className="rounded-card border border-line bg-surface p-10 text-center">
+            <Calendar className="w-16 h-16 text-ink-subtle mx-auto mb-4" />
+            <h3 className="text-xl font-medium text-ink mb-2">
               {filter === 'all' ? 'No bookings found' : `No ${filter} bookings`}
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-ink-muted mb-6">
               {searchQuery 
                 ? `No bookings match your search "${searchQuery}"`
                 : filter === 'all' 
@@ -376,8 +373,8 @@ const BookingPage: React.FC = () => {
 
         {/* Summary Stats */}
         {filteredBookings.length > 0 && (
-          <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <div className="mt-8 rounded-card border border-line bg-surface p-5 shadow-card">
+            <h3 className="text-lg font-semibold text-ink mb-4">
               Booking Summary
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -385,25 +382,25 @@ const BookingPage: React.FC = () => {
                 <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                   {filteredBookings.length}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Bookings</p>
+                <p className="text-sm text-ink-muted">Total Bookings</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                   {filteredBookings.filter(b => b.status === 'Completed').length}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Completed</p>
+                <p className="text-sm text-ink-muted">Completed</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                   {filteredBookings.filter(b => new Date(b.startTime) > new Date() && b.status !== 'Cancelled').length}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Upcoming</p>
+                <p className="text-sm text-ink-muted">Upcoming</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-2xl font-bold text-ink">
                   {formatPrice(filteredBookings.reduce((sum, b) => sum + b.totalCost, 0))}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Spent</p>
+                <p className="text-sm text-ink-muted">Total Spent</p>
               </div>
             </div>
           </div>

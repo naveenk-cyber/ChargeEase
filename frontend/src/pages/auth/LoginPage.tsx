@@ -1,261 +1,210 @@
-// src/pages/auth/LoginPage.tsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  Zap, 
-  ArrowRight,
-  AlertCircle,
-  CheckCircle,
-  Loader2,
-  Chrome,
-  Apple
-} from 'lucide-react';
+import { AlertCircle, ArrowRight, Lock, Mail, ShieldCheck, Zap } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import { LoginForm } from '../../types';
+import Wordmark from '../../components/ui/Wordmark';
+import type { LoginForm } from '../../types';
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  email: z.string().min(1, 'Enter your email address').email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   rememberMe: z.boolean().optional(),
 });
 
+const DEMO_EMAIL = 'demo@chargeease.test';
+const DEMO_PASSWORD = 'Demo1234!';
+
 const LoginPage: React.FC = () => {
-  const [showPassword, setShowPassword] = useState(false);
-  const [loginError, setLoginError] = useState<string>('');
+  const [loginError, setLoginError] = useState('');
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
 
   const {
     register,
     handleSubmit,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
+    defaultValues: { rememberMe: true },
   });
 
-  const onSubmit = async (data: LoginForm) => {
+  const submit = async (data: LoginForm) => {
     try {
       setLoginError('');
       await login(data);
-      // Redirect to home page after successful login
-      navigate('/', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (error) {
-      setLoginError(error instanceof Error ? error.message : 'Login failed');
+      setLoginError(error instanceof Error ? error.message : 'Sign in failed. Try again.');
     }
   };
 
-  const handleSocialLogin = async (provider: 'google' | 'apple') => {
-    try {
-      // Implement social login logic here
-      console.log(`${provider} login`);
-    } catch (error) {
-      setLoginError(`${provider} login failed`);
-    }
+  const fillDemo = () => {
+    setValue('email', DEMO_EMAIL, { shouldValidate: true });
+    setValue('password', DEMO_PASSWORD, { shouldValidate: true });
+    setValue('rememberMe', true);
+  };
+
+  const submitDemo = async () => {
+    fillDemo();
+    await submit({ ...getValues(), email: DEMO_EMAIL, password: DEMO_PASSWORD });
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center"
-        >
-          <Link to="/" className="inline-flex items-center space-x-3 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-              <Zap className="w-7 h-7 text-white" />
-            </div>
-            <span className="text-2xl font-bold gradient-text">ChargeEase</span>
-          </Link>
-          <h2 className="text-3xl font-bold text-white mb-2">Welcome back</h2>
-          <p className="text-gray-400">Sign in to your account to continue</p>
-        </motion.div>
+    <div className="mx-auto max-w-[1280px] px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
+      <div className="grid overflow-hidden rounded-[28px] border border-line bg-surface shadow-card lg:grid-cols-[0.92fr_1.08fr]">
+        {/* Visual panel */}
+        <div className="relative hidden min-h-[40rem] overflow-hidden bg-deep lg:block">
+          <img
+            src="/assets/station-6.jpg"
+            alt="Electric sedan charging at dusk"
+            className="absolute inset-0 h-full w-full object-cover opacity-70"
+            loading="lazy"
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(180deg, rgba(6,7,8,0.25) 0%, rgba(6,7,8,0.55) 55%, rgba(6,7,8,0.95) 100%)',
+            }}
+            aria-hidden="true"
+          />
+          <div className="relative flex h-full flex-col justify-between p-10">
+            <Link to="/" className="inline-flex items-center gap-2.5 self-start">
+              <span className="grid h-9 w-9 place-items-center rounded-[12px] bg-brand text-on-accent">
+                <Zap className="h-[18px] w-[18px]" fill="currentColor" strokeWidth={0} aria-hidden="true" />
+              </span>
+              <Wordmark className="text-[1.3rem] text-deep-ink" />
+            </Link>
 
-        {/* Login Form */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="modern-card p-8"
-        >
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Error Message */}
-            {loginError && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center space-x-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400"
-              >
-                <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm">{loginError}</span>
-              </motion.div>
-            )}
-
-            {/* Email Field */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  {...register('email')}
-                  type="email"
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-600 rounded-lg bg-gray-800/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your email"
-                />
+              <p className="ev-label">Welcome back</p>
+              <p className="mt-4 max-w-[24ch] text-[clamp(1.8rem,2.6vw,2.5rem)] font-bold leading-[1.05] tracking-[-0.04em] text-deep-ink">
+                Every session, saved station and receipt in one place.
+              </p>
+              <div className="mt-8 flex items-center gap-2 text-xs text-deep-ink-muted">
+                <ShieldCheck className="h-4 w-4 text-brand" aria-hidden="true" />
+                Demo session — no password leaves this browser.
               </div>
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-400">{errors.email.message}</p>
-              )}
             </div>
+          </div>
+        </div>
 
-            {/* Password Field */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  {...register('password')}
-                  type={showPassword ? 'text' : 'password'}
-                  className="block w-full pl-10 pr-10 py-3 border border-gray-600 rounded-lg bg-gray-800/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your password"
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
+        {/* Form panel */}
+        <div className="p-6 sm:p-10 lg:p-12">
+          <div className="mx-auto w-full max-w-md">
+            <Link to="/" className="mb-8 inline-flex items-center gap-2.5 lg:hidden">
+              <span className="grid h-9 w-9 place-items-center rounded-[12px] bg-brand text-on-accent">
+                <Zap className="h-[18px] w-[18px]" fill="currentColor" strokeWidth={0} aria-hidden="true" />
+              </span>
+              <Wordmark className="text-[1.3rem] text-ink" />
+            </Link>
+
+            <h1 className="text-[clamp(2rem,3.6vw,2.6rem)] font-bold leading-tight tracking-[-0.04em] text-ink">
+              Welcome back
+            </h1>
+            <p className="mt-2 text-sm text-ink-muted">
+              Sign in to see your bookings, saved stations and wallet activity.
+            </p>
+
+            <form onSubmit={handleSubmit(submit)} className="mt-8 space-y-5" noValidate>
+              {loginError && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2.5 rounded-control border border-error/30 bg-error-soft px-3.5 py-3 text-sm text-error-ink"
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-300" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-300" />
-                  )}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-400">{errors.password.message}</p>
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  {loginError}
+                </div>
               )}
-            </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  {...register('rememberMe')}
-                  type="checkbox"
-                  className="h-4 w-4 text-green-500 focus:ring-green-500 border-gray-600 rounded bg-gray-800"
-                />
-                <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-300">
+              <Input
+                label="Email Address"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                leftIcon={<Mail />}
+                error={errors.email?.message}
+                {...register('email')}
+              />
+
+              <Input
+                label="Password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="At least 6 characters"
+                leftIcon={<Lock />}
+                showPasswordToggle
+                error={errors.password?.message}
+                {...register('password')}
+              />
+
+              <div className="flex items-center justify-between gap-3">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-muted">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-line-strong bg-surface-muted accent-[color:var(--color-brand)]"
+                    {...register('rememberMe')}
+                  />
                   Remember me
                 </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-medium text-brand transition-colors hover:text-brand-strong"
+                >
+                  Forgot password?
+                </Link>
               </div>
-              <Link
-                to="/forgot-password"
-                className="text-sm text-green-400 hover:text-green-300 transition-colors duration-200"
+
+              <Button
+                type="submit"
+                size="lg"
+                fullWidth
+                isLoading={isLoading}
+                rightIcon={<ArrowRight className="h-4 w-4" />}
               >
-                Forgot password?
+                {isLoading ? 'Signing in…' : 'Sign in'}
+              </Button>
+            </form>
+
+            <div className="mt-6 rounded-card border border-line bg-surface-muted p-4">
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
+                Demo account
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+                This build signs in locally with any valid email and a 6+ character password. Use the
+                seeded details to see the account pages populated.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button variant="ghost" size="sm" onClick={fillDemo} type="button">
+                  Use the demo account
+                </Button>
+                <Button variant="secondary" size="sm" onClick={submitDemo} type="button" isLoading={isLoading}>
+                  Sign in with demo account
+                </Button>
+              </div>
+              <p className="mt-3 font-mono text-[0.7rem] text-ink-subtle">
+                demo@chargeease.test · Demo1234!
+              </p>
+            </div>
+
+            <p className="mt-6 text-sm text-ink-muted">
+              New to ChargeEase?{' '}
+              <Link
+                to="/signup"
+                className="font-semibold text-brand transition-colors hover:text-brand-strong"
+              >
+                Create a free account
               </Link>
-            </div>
-
-            {/* Login Button */}
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              loading={isLoading}
-              rightIcon={<ArrowRight className="w-5 h-5" />}
-              className="w-full"
-            >
-              {isLoading ? 'Signing in...' : 'Sign In'}
-            </Button>
-          </form>
-
-          {/* Divider */}
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-600" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-900 text-gray-400">Or continue with</span>
-              </div>
-            </div>
+            </p>
           </div>
-
-          {/* Social Login */}
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <Button
-              variant="ghost"
-              onClick={() => handleSocialLogin('google')}
-              className="w-full"
-            >
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
-              </svg>
-              Google
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => handleSocialLogin('apple')}
-              className="w-full"
-            >
-              <Apple className="w-5 h-5 mr-2" />
-              Apple
-            </Button>
-          </div>
-        </motion.div>
-
-        {/* Sign Up Link */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-center"
-        >
-          <p className="text-gray-400">
-            Don't have an account?{' '}
-            <Link
-              to="/signup"
-              className="text-green-400 hover:text-green-300 font-medium transition-colors duration-200"
-            >
-              Sign up for free
-            </Link>
-          </p>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

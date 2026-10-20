@@ -1,121 +1,75 @@
-// src/components/home/TopRatedSpots.tsx
 import React from 'react';
-import { FaBookmark } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
+import { ArrowUpRight } from 'lucide-react';
+import SectionHeading from '../ui/SectionHeading';
+import StationCard from '../station/StationCard';
+import { useStationCatalog } from '../../hooks/useStationCatalog';
+import type { ChargingStation } from '../../types';
 
-type ChargingSpotProps = {
-  id: number;
-  name: string;
-  location: string;
-  rating: number;
-  price: string;
-  imageUrl: string;
-  isBookmarked?: boolean;
-};
+const maxPower = (station: ChargingStation) =>
+  station.connectorTypes.reduce((max, connector) => Math.max(max, connector.maxPower), 0);
 
-const ChargingSpotCard: React.FC<ChargingSpotProps> = ({ 
-  name, 
-  location, 
-  rating, 
-  price, 
-  imageUrl, 
-  isBookmarked = false
-}) => {
-  return (
-    <div className="bg-gray-800 rounded-lg overflow-hidden">
-      <div className="relative h-40">
-        {/* We would use actual images in a real implementation */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${imageUrl})` }}
-        ></div>
-        
-        <div className="absolute top-2 right-2">
-          <button aria-label="Bookmark this charging spot" className="text-white hover:text-yellow-400 transition-colors">
-          <FaBookmark className={`h-6 w-6 ${isBookmarked ? 'text-yellow-400' : 'text-gray-400'}`} />
-          </button>
-        </div>
-        
-        <div className="absolute top-2 left-2 bg-orange-500 text-white px-2 py-1 rounded text-xs font-semibold">
-          {rating}
-        </div>
-      </div>
-      
-      <div className="p-3">
-        <h3 className="text-white font-medium">{name}</h3>
-        <p className="text-gray-400 text-sm mb-2">{location}</p>
-        
-        <div className="flex justify-between items-center">
-          <p className="text-white">
-            from <span className="font-semibold">{price}</span>/hour
-          </p>
-          <button aria-label="View charging spot details" className="text-gray-400 hover:text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
+/**
+ * Top-rated stations, straight from the catalog.
+ *
+ * The seed does not carry reviews yet, so every rating is 0. In that case the
+ * section switches to the fastest connectors instead of presenting an empty
+ * "top rated" list — and says which list it is showing.
+ */
 const TopRatedSpots: React.FC = () => {
-  // In a real implementation, this would come from an API
-  const spots = [
-    { 
-      id: 1, 
-      name: 'Green Charge Hub', 
-      location: 'New York City', 
-      rating: 4.8, 
-      price: '$1',
-      imageUrl: '/images/spots/green-charge.jpg'
-    },
-    { 
-      id: 2, 
-      name: 'EcoCharge Station', 
-      location: 'Tokyo', 
-      rating: 4.6, 
-      price: '$1.50',
-      imageUrl: '/images/spots/eco-charge.jpg'
-    },
-    { 
-      id: 3, 
-      name: 'PowerUp Plaza', 
-      location: 'Berlin', 
-      rating: 4.7, 
-      price: '$2',
-      imageUrl: '/images/spots/power-up.jpg'
-    },
-    { 
-      id: 4, 
-      name: 'EcoPower Hub', 
-      location: 'Sydney', 
-      rating: 4.5, 
-      price: '$1.80',
-      imageUrl: '/images/spots/eco-power.jpg'
-    },
-    { 
-      id: 5, 
-      name: 'EcoCharge Inn', 
-      location: 'Rome', 
-      rating: 4.2, 
-      price: '$1.20',
-      imageUrl: '/images/spots/eco-inn.jpg'
-    },
-  ];
-  
+  const { data, isLoading } = useStationCatalog();
+  const stations = data?.stations ?? [];
+  const hasRatings = stations.some((station) => station.reviewCount > 0);
+
+  const featured = [...stations]
+    .sort((a, b) =>
+      hasRatings
+        ? b.rating - a.rating || b.reviewCount - a.reviewCount
+        : maxPower(b) - maxPower(a) || a.name.localeCompare(b.name),
+    )
+    .slice(0, 4);
+
   return (
-    <section className="mt-12">
-      <h2 className="text-lg font-semibold mb-4 text-white">Top-rated charging spots</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {spots.map((spot) => (
-          <ChargingSpotCard 
-            key={spot.id}
-            {...spot}
-          />
-        ))}
-      </div>
+    <section aria-labelledby="top-stations-heading">
+      <SectionHeading
+        eyebrow={hasRatings ? 'Top rated by drivers' : 'Fastest connectors'}
+        title={hasRatings ? 'Charging spots worth the detour' : 'Stations built for a quick stop'}
+        description={
+          hasRatings
+            ? 'Ranked by driver reviews from the ChargeEase catalog.'
+            : 'Ranked by peak connector power while the review feed is still empty.'
+        }
+        action={
+          <Link
+            to="/search?sort=speed"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-colors hover:text-brand-strong"
+          >
+            Browse the catalog
+            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        }
+      />
+
+      {isLoading ? (
+        <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={index}
+              className="h-[24rem] animate-pulse rounded-card border border-line bg-surface-muted"
+            />
+          ))}
+        </div>
+      ) : featured.length === 0 ? (
+        <p className="mt-7 rounded-card border border-line bg-surface p-5 text-sm text-ink-muted">
+          The catalog is empty right now. Try the station finder for a full search.
+        </p>
+      ) : (
+        <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {featured.map((station) => (
+            <StationCard key={station.id} station={station} compact />
+          ))}
+        </div>
+      )}
     </section>
   );
 };

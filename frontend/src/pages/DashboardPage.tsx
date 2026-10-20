@@ -16,15 +16,14 @@ import {
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
-import { Booking, ChargingStation } from '../types';
+import { Booking } from '../types';
 import { formatPrice, formatDate } from '../utils/helpers';
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
   const [recentSessions, setRecentSessions] = useState<Booking[]>([]);
-  const [favoriteStations, setFavoriteStations] = useState<ChargingStation[]>([]);
-  const [stats, setStats] = useState({
+  const [stats] = useState({
     totalSessions: 24,
     totalEnergy: 890,
     totalSpent: 267,
@@ -55,8 +54,8 @@ const DashboardPage: React.FC = () => {
           operatingHours: { isOpen24Hours: true },
           hostType: 'Tesla'
         },
-        startTime: new Date(Date.now(),  3600000).toISOString(), // 1 hour from now
-        endTime: new Date(Date.now() , 7200000).toISOString(), // 2 hours from now
+        startTime: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
+        endTime: new Date(Date.now() + 7200000).toISOString(), // 2 hours from now
         duration: 60,
         connectorType: 'Tesla',
         status: 'Confirmed',
@@ -115,17 +114,17 @@ const DashboardPage: React.FC = () => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6"
+      className="rounded-card border border-line bg-surface p-5 shadow-card"
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</p>
-          <div className="flex items-baseline space-x-1">
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
-            {unit && <span className="text-sm text-gray-500">{unit}</span>}
+          <p className="text-[0.8125rem] font-medium text-ink-muted">{title}</p>
+          <div className="mt-1 flex items-baseline gap-1">
+            <p className="ev-figure text-[1.85rem] text-ink">{value}</p>
+            {unit && <span className="text-xs text-ink-subtle">{unit}</span>}
           </div>
           {trend && (
-            <p className="text-xs text-green-600 flex items-center mt-1">
+            <p className="mt-1 flex items-center text-xs text-success-ink">
               <TrendingUp className="w-3 h-3 mr-1" />
               {trend}
             </p>
@@ -145,41 +144,41 @@ const DashboardPage: React.FC = () => {
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow"
+      className="rounded-card border border-line bg-surface p-4 shadow-card transition-shadow hover:shadow-card-hover"
     >
       <div className="flex justify-between items-start mb-3">
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
+          <h3 className="font-semibold text-ink text-sm">
             {booking.station.name}
           </h3>
-          <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center mt-1">
+          <p className="text-xs text-ink-muted flex items-center mt-1">
             <MapPin className="w-3 h-3 mr-1" />
             {booking.station.address}
           </p>
         </div>
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          booking.status === 'Confirmed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' :
-          booking.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
-          'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+          booking.status === 'Confirmed' ? 'border border-line bg-surface-muted text-ink-muted' :
+          booking.status === 'Completed' ? 'status-available' :
+          'border border-line bg-surface-muted text-ink-muted'
         }`}>
           {booking.status}
         </span>
       </div>
 
       <div className="grid grid-cols-2 gap-3 text-xs">
-        <div className="flex items-center text-gray-600 dark:text-gray-400">
+        <div className="flex items-center text-ink-muted">
           <Calendar className="w-3 h-3 mr-1" />
           {formatDate(booking.startTime, 'datetime')}
         </div>
-        <div className="flex items-center text-gray-600 dark:text-gray-400">
+        <div className="flex items-center text-ink-muted">
           <Clock className="w-3 h-3 mr-1" />
           {booking.duration} min
         </div>
-        <div className="flex items-center text-gray-600 dark:text-gray-400">
+        <div className="flex items-center text-ink-muted">
           <Zap className="w-3 h-3 mr-1" />
           {booking.connectorType}
         </div>
-        <div className="flex items-center text-gray-600 dark:text-gray-400">
+        <div className="flex items-center text-ink-muted">
           <DollarSign className="w-3 h-3 mr-1" />
           {formatPrice(booking.totalCost)}
         </div>
@@ -200,14 +199,14 @@ const DashboardPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-canvas">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-3xl font-bold text-ink">
             Welcome back, {user?.name}!
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+          <p className="text-ink-muted mt-2">
             Here's your charging activity and upcoming sessions.
           </p>
         </div>
@@ -217,32 +216,32 @@ const DashboardPage: React.FC = () => {
           <StatCard
             title="Total Sessions"
             value={stats.totalSessions}
-            icon={<Zap className="w-6 h-6 text-white" />}
+            icon={<Zap className="h-5 w-5 text-brand" />}
             trend="12% this month"
-            color="bg-blue-500"
+            color="bg-brand-soft"
           />
           <StatCard
             title="Energy Consumed"
             value={stats.totalEnergy}
             unit="kWh"
-            icon={<Battery className="w-6 h-6 text-white" />}
+            icon={<Battery className="h-5 w-5 text-brand" />}
             trend="8% this month"
-            color="bg-green-500"
+            color="bg-brand-soft"
           />
           <StatCard
             title="Total Spent"
             value={formatPrice(stats.totalSpent)}
-            icon={<DollarSign className="w-6 h-6 text-white" />}
+            icon={<DollarSign className="h-5 w-5 text-brand" />}
             trend="-5% this month"
-            color="bg-orange-500"
+            color="bg-brand-soft"
           />
           <StatCard
             title="CO₂ Saved"
             value={stats.carbonSaved}
             unit="kg"
-            icon={<Car className="w-6 h-6 text-white" />}
+            icon={<Car className="h-5 w-5 text-brand" />}
             trend="15% this month"
-            color="bg-emerald-500"
+            color="bg-brand-soft"
           />
         </div>
 
@@ -252,7 +251,7 @@ const DashboardPage: React.FC = () => {
             {/* Upcoming Bookings */}
             <div>
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                <h2 className="text-xl font-semibold text-ink">
                   Upcoming Sessions
                 </h2>
                 <Button size="sm" variant="outline">
@@ -268,12 +267,12 @@ const DashboardPage: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
+                <div className="rounded-card border border-line bg-surface p-8 text-center">
                   <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  <h3 className="text-lg font-medium text-ink mb-2">
                     No upcoming sessions
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  <p className="text-ink-muted mb-4">
                     Book your next charging session to see it here.
                   </p>
                   <Button>
@@ -287,7 +286,7 @@ const DashboardPage: React.FC = () => {
             {/* Recent Sessions */}
             <div>
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                <h2 className="text-xl font-semibold text-ink">
                   Recent Sessions
                 </h2>
                 <Button size="sm" variant="ghost">
@@ -306,8 +305,8 @@ const DashboardPage: React.FC = () => {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Quick Actions */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="rounded-card border border-line bg-surface p-5 shadow-card">
+              <h3 className="text-lg font-semibold text-ink mb-4">
                 Quick Actions
               </h3>
               <div className="space-y-3">
@@ -331,8 +330,8 @@ const DashboardPage: React.FC = () => {
             </div>
 
             {/* Favorite Stations */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="rounded-card border border-line bg-surface p-5 shadow-card">
+              <h3 className="text-lg font-semibold text-ink mb-4">
                 Favorite Stations
               </h3>
               <div className="space-y-3">
@@ -341,7 +340,7 @@ const DashboardPage: React.FC = () => {
                     <Zap className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    <p className="text-sm font-medium text-ink truncate">
                       Tesla Supercharger
                     </p>
                     <p className="text-xs text-gray-500 truncate">Downtown Plaza</p>
@@ -355,18 +354,18 @@ const DashboardPage: React.FC = () => {
             </div>
 
             {/* Membership Status */}
-            <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg shadow-md p-6 text-white">
-              <h3 className="text-lg font-semibold mb-2">
+            <div className="rounded-xl border border-line bg-surface p-5">
+              <h3 className="text-base font-semibold text-ink mb-1.5">
                 {user?.membershipLevel} Member
               </h3>
-              <p className="text-orange-100 text-sm mb-4">
+              <p className="text-ink-muted text-sm mb-4">
                 {user?.membershipLevel === 'Free' 
                   ? 'Upgrade to Premium for exclusive benefits and discounts.'
                   : 'Enjoy your Premium benefits and exclusive discounts!'
                 }
               </p>
               {user?.membershipLevel === 'Free' && (
-                <Button variant="outline" className="text-white border-white hover:bg-white hover:text-orange-600">
+                <Button className="bg-brand text-on-accent hover:bg-brand-strong">
                   Upgrade Now
                 </Button>
               )}

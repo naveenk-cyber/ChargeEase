@@ -1,318 +1,197 @@
-// src/components/home/SearchBar.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { 
-  Search, 
-  MapPin, 
-  Calendar, 
-  Users, 
-  Filter,
-  Loader2,
-  Navigation
-} from 'lucide-react';
+import { Crosshair, Search, Zap } from 'lucide-react';
 import Button from '../ui/Button';
 import { useGeolocation } from '../../hooks/useGeolocation';
-import { SearchFilters } from '../../types';
-import { formatDate } from '../../utils/helpers';
+import type { ChargingSpeed, FilterMeta, SearchFilters } from '../../types';
 
 interface SearchBarProps {
   className?: string;
   onSearch?: (filters: SearchFilters) => void;
   compact?: boolean;
+  /** Filter values from the API; falls back to the common standards. */
+  meta?: FilterMeta | null;
+  initialQuery?: string;
 }
 
-const SearchBar: React.FC<SearchBarProps> = ({ 
-  className = '', 
+const FALLBACK_CONNECTORS = ['CCS', 'CHAdeMO', 'J1772', 'Tesla', 'Type 2'];
+const FALLBACK_SPEEDS = ['Level 2', 'DC Fast', 'Supercharger'];
+
+/**
+ * Station search.
+ *
+ * Earlier this component asked for check-in/check-out dates and a guest count —
+ * values that were forwarded as query parameters the station API never read.
+ * It now collects the three things the catalog can actually filter on:
+ * a place or station name, a connector standard and a charging speed.
+ */
+const SearchBar: React.FC<SearchBarProps> = ({
+  className = '',
   onSearch,
-  compact = false 
+  compact = false,
+  meta = null,
+  initialQuery = '',
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [checkInDate, setCheckInDate] = useState('');
-  const [checkOutDate, setCheckOutDate] = useState('');
-  const [guests, setGuests] = useState(1);
-  const [showFilters, setShowFilters] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  
+  const [query, setQuery] = useState(initialQuery);
+  const [connector, setConnector] = useState('');
+  const [speed, setSpeed] = useState('');
+  const [availableOnly, setAvailableOnly] = useState(false);
   const navigate = useNavigate();
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  
-  const { 
-    latitude, 
-    longitude, 
-    isLoading: isLocationLoading, 
-    getCurrentLocation 
+
+  const {
+    latitude,
+    longitude,
+    isLoading: locating,
+    error: locationError,
+    getCurrentLocation,
   } = useGeolocation({ immediate: false });
 
-  const handleLocationClick = async () => {
-    await getCurrentLocation();
-    if (latitude && longitude) {
-      setSearchTerm('Current Location');
+  const connectors = meta?.connectorTypes?.length ? meta.connectorTypes : FALLBACK_CONNECTORS;
+  const speeds = meta?.chargingSpeeds?.length ? meta.chargingSpeeds : FALLBACK_SPEEDS;
+
+  const buildFilters = (): SearchFilters => ({
+    query: query.trim() || undefined,
+    connectorTypes: connector ? [connector] : undefined,
+    chargingSpeed: speed ? [speed as ChargingSpeed] : undefined,
+    availability: availableOnly || undefined,
+    location:
+      latitude != null && longitude != null
+        ? { latitude, longitude, radius: 25 }
+        : undefined,
+  });
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const filters = buildFilters();
+
+    if (onSearch) {
+      onSearch(filters);
+      return;
     }
+
+    const params = new URLSearchParams();
+    if (filters.query) params.set('q', filters.query);
+    if (connector) params.set('connector', connector);
+    if (speed) params.set('speed', speed);
+    if (availableOnly) params.set('available', '1');
+    if (latitude != null && longitude != null) {
+      params.set('lat', String(latitude));
+      params.set('lng', String(longitude));
+    }
+    navigate(`/search${params.toString() ? `?${params.toString()}` : ''}`);
   };
 
-  const handleSearch = async () => {
-    setIsSearching(true);
-    
-    const filters: SearchFilters = {
-      location: latitude && longitude ? {
-        latitude,
-        longitude,
-        radius: 25 // default radius
-      } : undefined,
-    };
-
-    try {
-      if (onSearch) {
-        onSearch(filters);
-      } else {
-        // Navigate to search page with filters
-        const searchParams = new URLSearchParams();
-        if (searchTerm) searchParams.set('q', searchTerm);
-        if (checkInDate) searchParams.set('checkIn', checkInDate);
-        if (checkOutDate) searchParams.set('checkOut', checkOutDate);
-        if (guests > 1) searchParams.set('guests', guests.toString());
-        if (latitude && longitude) {
-          searchParams.set('lat', latitude.toString());
-          searchParams.set('lng', longitude.toString());
-        }
-        
-        navigate(`/search?${searchParams.toString()}`);
-      }
-    } catch (error) {
-      console.error('Search failed:', error);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
-
-  if (compact) {
-    return (
-      <div className={`relative ${className}`}>
-        <div className="flex items-center bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex-1 px-4 py-3">
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Search charging stations..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className="w-full bg-transparent outline-none text-gray-700 dark:text-gray-300 placeholder-gray-500"
-            />
-          </div>
-          <Button
-            onClick={handleLocationClick}
-            variant="ghost"
-            size="icon"
-            className="mx-2"
-            isLoading={isLocationLoading}
-          >
-            <Navigation className="w-4 h-4" />
-          </Button>
-          <Button
-            onClick={handleSearch}
-            className="m-2 rounded-full"
-            size="sm"
-            isLoading={isSearching}
-          >
-            <Search className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const fieldClass =
+    'h-12 w-full rounded-control border border-line bg-surface-muted px-3.5 text-sm text-ink ' +
+    'placeholder:text-ink-subtle transition-colors hover:border-line-strong focus:border-brand ' +
+    'focus:outline-none focus:ring-2 focus:ring-brand/25';
 
   return (
-    <motion.div 
-      className={`bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-2 w-full max-w-4xl ${className}`}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+    <form
+      onSubmit={handleSubmit}
+      role="search"
+      aria-label="Find a charging station"
+      className={`rounded-card border border-line bg-surface p-3 shadow-card sm:p-4 ${className}`}
     >
-      <div className="flex flex-col lg:flex-row lg:items-center gap-2">
-        {/* Location Search */}
-        <div className="flex-1 min-w-0">
-          <div className="p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-            <div className="flex items-center space-x-3">
-              <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Where</div>
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  placeholder="Search destination"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  className="w-full bg-transparent text-sm font-medium text-gray-900 dark:text-gray-100 placeholder-gray-500 outline-none"
-                />
-              </div>
-              <Button
-                onClick={handleLocationClick}
-                variant="ghost"
-                size="icon"
-                className="flex-shrink-0"
-                isLoading={isLocationLoading}
-              >
-                <Navigation className="w-4 h-4" />
-              </Button>
-            </div>
+      <div className={compact ? 'grid gap-2.5 lg:grid-cols-[1.6fr_1fr_1fr_auto]' : 'grid gap-2.5 md:grid-cols-2 lg:grid-cols-[1.7fr_1fr_1fr_auto]'}>
+        <div>
+          <label htmlFor="station-search" className="mb-1.5 block text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-ink-subtle">
+            Where
+          </label>
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-subtle"
+              aria-hidden="true"
+            />
+            <input
+              id="station-search"
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="City, postcode or station"
+              className={`${fieldClass} pl-10`}
+            />
           </div>
         </div>
 
-        {/* Check-in Date */}
-        <div className="flex-1 min-w-0 lg:border-l lg:border-gray-200 dark:lg:border-gray-700">
-          <div className="p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-            <div className="flex items-center space-x-3">
-              <Calendar className="w-5 h-5 text-gray-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Check-in</div>
-                <input
-                  type="date"
-                  value={checkInDate}
-                  onChange={(e) => setCheckInDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full bg-transparent text-sm font-medium text-gray-900 dark:text-gray-100 outline-none"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Check-out Date */}
-        <div className="flex-1 min-w-0 lg:border-l lg:border-gray-200 dark:lg:border-gray-700">
-          <div className="p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-            <div className="flex items-center space-x-3">
-              <Calendar className="w-5 h-5 text-gray-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Check-out</div>
-                <input
-                  type="date"
-                  value={checkOutDate}
-                  onChange={(e) => setCheckOutDate(e.target.value)}
-                  min={checkInDate || new Date().toISOString().split('T')[0]}
-                  className="w-full bg-transparent text-sm font-medium text-gray-900 dark:text-gray-100 outline-none"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Guests */}
-        <div className="flex-1 min-w-0 lg:border-l lg:border-gray-200 dark:lg:border-gray-700">
-          <div className="p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-            <div className="flex items-center space-x-3">
-              <Users className="w-5 h-5 text-gray-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Vehicles</div>
-                <select
-                  value={guests}
-                  onChange={(e) => setGuests(parseInt(e.target.value))}
-                  className="w-full bg-transparent text-sm font-medium text-gray-900 dark:text-gray-100 outline-none"
-                >
-                  {[1, 2, 3, 4, 5].map(num => (
-                    <option key={num} value={num}>
-                      {num} {num === 1 ? 'vehicle' : 'vehicles'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Search and Filter Buttons */}
-        <div className="flex items-center space-x-2 lg:pl-2">
-          <Button
-            onClick={() => setShowFilters(!showFilters)}
-            variant="outline"
-            size="icon"
-            className="flex-shrink-0"
+        <div>
+          <label htmlFor="station-connector" className="mb-1.5 block text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-ink-subtle">
+            Connector
+          </label>
+          <select
+            id="station-connector"
+            value={connector}
+            onChange={(event) => setConnector(event.target.value)}
+            className={fieldClass}
           >
-            <Filter className="w-4 h-4" />
+            <option value="">Any connector</option>
+            {connectors.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="station-speed" className="mb-1.5 block text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-ink-subtle">
+            Speed
+          </label>
+          <select
+            id="station-speed"
+            value={speed}
+            onChange={(event) => setSpeed(event.target.value)}
+            className={fieldClass}
+          >
+            <option value="">Any speed</option>
+            {speeds.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            onClick={getCurrentLocation}
+            isLoading={locating}
+            leftIcon={<Crosshair className="h-4 w-4" />}
+            className="shrink-0 px-4"
+            aria-label="Use my current location"
+            title="Use my current location"
+          >
+            <span className="hidden sm:inline">Near me</span>
           </Button>
-          
-          <Button
-            onClick={handleSearch}
-            className="flex-shrink-0 px-6"
-            isLoading={isSearching}
-            leftIcon={<Search className="w-4 h-4" />}
-          >
+          <Button type="submit" size="lg" className="flex-1" leftIcon={<Zap className="h-4 w-4" />}>
             Search
           </Button>
         </div>
       </div>
 
-      {/* Advanced Filters */}
-      {showFilters && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          className="border-t border-gray-200 dark:border-gray-700 mt-4 pt-4"
-        >
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Charging Speed
-              </label>
-              <select className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
-                <option value="">Any</option>
-                <option value="Level 1">Level 1</option>
-                <option value="Level 2">Level 2</option>
-                <option value="DC Fast">DC Fast</option>
-                <option value="Supercharger">Supercharger</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Connector Type
-              </label>
-              <select className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
-                <option value="">Any</option>
-                <option value="J1772">J1772</option>
-                <option value="CCS">CCS</option>
-                <option value="CHAdeMO">CHAdeMO</option>
-                <option value="Tesla">Tesla</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Max Price
-              </label>
-              <select className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
-                <option value="">Any</option>
-                <option value="0.25">$0.25/kWh</option>
-                <option value="0.50">$0.50/kWh</option>
-                <option value="0.75">$0.75/kWh</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Amenities
-              </label>
-              <select className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
-                <option value="">Any</option>
-                <option value="restrooms">Restrooms</option>
-                <option value="restaurant">Restaurant</option>
-                <option value="wifi">WiFi</option>
-                <option value="24-7">24/7 Access</option>
-              </select>
-            </div>
-          </div>
-        </motion.div>
-      )}
-    </motion.div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-ink-muted">
+          <input
+            type="checkbox"
+            checked={availableOnly}
+            onChange={(event) => setAvailableOnly(event.target.checked)}
+            className="h-4 w-4 rounded border-line-strong bg-surface-muted accent-[color:var(--color-brand)]"
+          />
+          Available connectors only
+        </label>
+
+        <p className="text-xs text-ink-subtle" role="status">
+          {latitude != null && longitude != null
+            ? 'Using your approximate location for distance.'
+            : locationError
+              ? locationError
+              : 'Add a location to sort by distance.'}
+        </p>
+      </div>
+    </form>
   );
 };
 

@@ -8,9 +8,12 @@ import {
   UserAnalytics,
   ApiResponse,
   LoginForm,
-  SignupForm
+  SignupForm,
+  FilterMeta
 } from '../types';
 import { API_BASE_URL } from '../utils/constants';
+import { SAMPLE_STATIONS, searchSampleStations, getSampleStation } from '../data/sampleStations';
+import { calculateDistance } from '../utils/helpers';
 
 // Base API client
 class ApiClient {
@@ -79,6 +82,44 @@ class ApiClient {
 }
 
 const apiClient = new ApiClient(API_BASE_URL);
+
+/** Fetch rejects with a TypeError when the server is unreachable. */
+function isNetworkError(error: unknown): boolean {
+  return (
+    error instanceof TypeError ||
+    (error instanceof Error && /failed to fetch|networkerror|load failed/i.test(error.message))
+  );
+}
+
+/** Filter values derived from the bundled sample catalog (offline mode). */
+function sampleFilterMeta(): FilterMeta {
+  const connectors = new Set<string>();
+  const speeds = new Set<string>();
+  const amenities = new Set<string>();
+  const operators = new Set<string>();
+  let min = Infinity;
+  let max = 0;
+
+  for (const station of SAMPLE_STATIONS) {
+    station.connectorTypes.forEach((connector) => connectors.add(connector.type));
+    speeds.add(station.chargingSpeed);
+    station.amenities.forEach((amenity) => amenities.add(amenity));
+    if (station.operator) operators.add(station.operator);
+    const price = station.pricing.perKwh;
+    if (price != null) {
+      min = Math.min(min, price);
+      max = Math.max(max, price);
+    }
+  }
+
+  return {
+    operators: [...operators].sort(),
+    connectorTypes: [...connectors].sort(),
+    chargingSpeeds: [...speeds].sort(),
+    amenities: [...amenities].sort(),
+    priceRange: { min: Number.isFinite(min) ? min : 0, max },
+  };
+}
 
 // Authentication services
 export const authService = {
@@ -180,11 +221,14 @@ export const userService = {
 
 // Charging station services
 export const stationService = {
-  async searchStations(filters: SearchFilters, page = 1, limit = 20): Promise<SearchResult> {
+  async searchStations(filters: SearchFilters, page = 1, limit = 12): Promise<SearchResult> {
     const queryParams = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
     });
+
+    if (filters.query) queryParams.append('q', filters.query);
+    if (filters.sort) queryParams.append('sort', filters.sort);
 
     if (filters.location) {
       queryParams.append('lat', filters.location.latitude.toString());
@@ -193,15 +237,19 @@ export const stationService = {
     }
 
     if (filters.chargingSpeed) {
-      filters.chargingSpeed.forEach(speed => queryParams.append('chargingSpeed', speed));
+      filters.chargingSpeed.forEach((speed) => queryParams.append('chargingSpeed', speed));
     }
 
     if (filters.connectorTypes) {
-      filters.connectorTypes.forEach(type => queryParams.append('connectorType', type));
+      filters.connectorTypes.forEach((type) => queryParams.append('connectorType', type));
+    }
+
+    if (filters.operators) {
+      filters.operators.forEach((operator) => queryParams.append('operator', operator));
     }
 
     if (filters.amenities) {
-      filters.amenities.forEach(amenity => queryParams.append('amenity', amenity));
+      filters.amenities.forEach((amenity) => queryParams.append('amenity', amenity));
     }
 
     if (filters.availability !== undefined) {
@@ -213,7 +261,7 @@ export const stationService = {
     }
 
     if (filters.hostTypes) {
-      filters.hostTypes.forEach(type => queryParams.append('hostType', type));
+      filters.hostTypes.forEach((type) => queryParams.append('hostType', type));
     }
 
     if (filters.priceRange) {
@@ -221,46 +269,142 @@ export const stationService = {
       queryParams.append('maxPrice', filters.priceRange.max.toString());
     }
 
-    const response = await apiClient.get<SearchResult>(`/stations?${queryParams.toString()}`);
+    try {
+      const response = await apiClient.get<SearchResult>(`/stations?${queryParams.toString()}`);
+      return { ...response.data, source: response.data.source ?? 'database' };
+    } catch (error) {
+      // Only an unreachable API falls back to sample data. A real HTTP error
+      // (validation, server fault) is surfaced so the user can retry.
+      if (!isNetworkError(error)) throw error;
+      return searchSampleStations(filters, page, limit);
+    }
+  },
+
+  async getStationById(
+    id: string,
+    origin?: { latitude: number; longitude: number },
+  ): Promise<ChargingStation> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (origin) {
+        queryParams.append('lat', origin.latitude.toString());
+        queryParams.append('lng', origin.longitude.toString());
+      }
+      const suffix = queryParams.toString() ? `?${queryParams.toString()}` : '';
+      const response = await apiClient.get<ChargingStation | { station: ChargingStation }>(
+        `/stations/${id}${suffix}`,
+      );
+      // The detail endpoint wraps the record in `{ station }` while older
+      // payloads (and the sample catalog) return the station directly.
+      const station =
+        'station' in response.data ? response.data.station : response.data;
+      return { ...station, dataSource: station.dataSource ?? 'database' };
+    } catch (error) {
+      const sample = getSampleStation(id);
+      if (sample && isNetworkError(error)) {
+        const distance = origin
+          ? calculateDistance(origin.latitude, origin.longitude, sample.latitude, sample.longitude)
+          : undefined;
+        return { ...sample, distance };
+      }
+      throw error;
+    }
+  },
+
+  async getReviews(
+    stationId: string,
+    page = 1,
+    limit = 10,
+  ): Promise<{ reviews: Review[]; total: number }> {
+    try {
+      const response = await apiClient.get<{ reviews: Review[]; total: number }>(
+        `/stations/${stationId}/reviews?page=${page}&limit=${limit}`,
+      );
+      return response.data;
+    } catch (error) {
+      // Sample stations have no persisted reviews; show an honest empty list.
+      if (isNetworkError(error) && getSampleStation(stationId)) {
+        return { reviews: [], total: 0 };
+      }
+      throw error;
+    }
+  },
+
+  async createReview(review: {
+    stationId: string;
+    rating: number;
+    title: string;
+    comment: string;
+  }): Promise<Review> {
+    const response = await apiClient.post<Review>(`/stations/${review.stationId}/reviews`, {
+      rating: review.rating,
+      title: review.title,
+      comment: review.comment,
+    });
     return response.data;
   },
 
-  async getStationById(id: string): Promise<ChargingStation> {
-    const response = await apiClient.get<ChargingStation>(`/stations/${id}`);
-    return response.data;
-  },
-
-  async getStationReviews(stationId: string, page = 1, limit = 10): Promise<{ reviews: Review[]; total: number }> {
-    const response = await apiClient.get<{ reviews: Review[]; total: number }>(`/stations/${stationId}/reviews?page=${page}&limit=${limit}`);
-    return response.data;
+  async getStationReviews(
+    stationId: string,
+    page = 1,
+    limit = 10,
+  ): Promise<{ reviews: Review[]; total: number }> {
+    return this.getReviews(stationId, page, limit);
   },
 
   async getNearbyStations(lat: number, lng: number, radius = 25): Promise<ChargingStation[]> {
-    const response = await apiClient.get<ChargingStation[]>(`/stations/nearby?lat=${lat}&lng=${lng}&radius=${radius}`);
+    const response = await apiClient.get<ChargingStation[]>(
+      `/stations/nearby?lat=${lat}&lng=${lng}&radius=${radius}`,
+    );
     return response.data;
   },
 
   async getPopularStations(): Promise<ChargingStation[]> {
-    const response = await apiClient.get<ChargingStation[]>('/stations/popular');
-    return response.data;
+    const result = await this.searchStations({ sort: 'rating' }, 1, 6);
+    return result.stations;
   },
 
   async getTopRatedStations(): Promise<ChargingStation[]> {
-    const response = await apiClient.get<ChargingStation[]>('/stations/top-rated');
+    const result = await this.searchStations({ sort: 'rating' }, 1, 6);
+    return result.stations;
+  },
+
+  /** Distinct filter values from the running catalog, with a sample fallback. */
+  async getFilterMeta(): Promise<FilterMeta> {
+    try {
+      const response = await apiClient.get<FilterMeta>('/stations/meta/filters');
+      return response.data;
+    } catch (error) {
+      if (!isNetworkError(error)) throw error;
+      return sampleFilterMeta();
+    }
+  },
+
+  // Favourites are kept in this browser (see `useFavorites`). These calls stay
+  // available for authenticated backends and are intentionally tolerant.
+  async getFavorites(): Promise<ChargingStation[]> {
+    const response = await apiClient.get<ChargingStation[]>('/users/favorites');
     return response.data;
   },
 
-  async addToFavorites(stationId: string): Promise<void> {
+  async addFavorite(stationId: string): Promise<void> {
     await apiClient.post(`/stations/${stationId}/favorite`);
   },
 
-  async removeFromFavorites(stationId: string): Promise<void> {
+  async removeFavorite(stationId: string): Promise<void> {
     await apiClient.delete(`/stations/${stationId}/favorite`);
   },
 
+  async addToFavorites(stationId: string): Promise<void> {
+    await this.addFavorite(stationId);
+  },
+
+  async removeFromFavorites(stationId: string): Promise<void> {
+    await this.removeFavorite(stationId);
+  },
+
   async getFavoriteStations(): Promise<ChargingStation[]> {
-    const response = await apiClient.get<ChargingStation[]>('/users/favorites');
-    return response.data;
+    return this.getFavorites();
   },
 
   async reportStation(stationId: string, reason: string, description?: string): Promise<void> {
@@ -341,7 +485,7 @@ export const reviewService = {
     formData.append('comment', reviewData.comment);
 
     if (reviewData.images) {
-      reviewData.images.forEach((image, index) => {
+      reviewData.images.forEach((image) => {
         formData.append(`images`, image);
       });
     }

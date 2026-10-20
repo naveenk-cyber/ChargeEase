@@ -1,251 +1,276 @@
-// src/components/layout/Header.tsx
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Menu, 
-  X, 
-  User, 
-  LogOut, 
-  Settings, 
-  Wallet, 
-  MapPin,
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  CalendarDays,
+  ChevronDown,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  User,
+  Wallet,
+  X,
   Zap,
-  Bell,
-  ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../ui/Button';
+import ButtonLink from '../ui/ButtonLink';
+import Wordmark from '../ui/Wordmark';
+
+const NAV_LINKS = [
+  { name: 'Find stations', href: '/search' },
+  { name: 'Membership', href: '/membership' },
+  { name: 'About', href: '/about' },
+  { name: 'Contact', href: '/contact' },
+];
+
+const ACCOUNT_LINKS = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Bookings', href: '/bookings', icon: CalendarDays },
+  { name: 'Wallet', href: '/wallet', icon: Wallet },
+  { name: 'Profile', href: '/profile', icon: User },
+];
 
 const Header: React.FC = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const accountRef = useRef<HTMLDivElement>(null);
 
-  const navigationLinks = [
-    { name: 'Home', href: '/', icon: Zap },
-    { name: 'Find Stations', href: '/search', icon: MapPin },
-    { name: 'About', href: '/about', icon: null },
-    { name: 'Contact', href: '/contact', icon: null },
-  ];
+  useEffect(() => {
+    setMobileOpen(false);
+    setAccountOpen(false);
+  }, [location.pathname]);
 
-  const userMenuItems = [
-    { name: 'Profile', href: '/profile', icon: User },
-    { name: 'Wallet', href: '/wallet', icon: Wallet },
-    { name: 'Settings', href: '/settings', icon: Settings },
-  ];
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!accountRef.current?.contains(event.target as Node)) setAccountOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setAccountOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [accountOpen]);
+
+  const isActive = (href: string) =>
+    href === '/' ? location.pathname === '/' : location.pathname.startsWith(href);
 
   const handleLogout = async () => {
-    try {
-      await logout();
-      setIsUserMenuOpen(false);
-      navigate('/');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    setAccountOpen(false);
+    await logout();
+    navigate('/');
   };
 
+  const initials = (user?.name || 'Driver')
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-gray-900/80 backdrop-blur-md border-b border-white/10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3 group">
-            <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center group-hover:shadow-lg group-hover:shadow-green-500/25 transition-all duration-200">
-              <Zap className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xl font-bold gradient-text">ChargeEase</span>
-          </Link>
+    <header className="sticky top-0 z-50 border-b border-line/80 bg-canvas/85 backdrop-blur-xl">
+      <div className="mx-auto flex h-[60px] max-w-[1280px] items-center justify-between gap-5 px-4 sm:px-6 lg:px-8">
+        <Link
+          to="/"
+          className="flex shrink-0 items-center gap-2.5 rounded-full focus-visible:ring-2 focus-visible:ring-brand"
+          aria-label="ChargeEase home"
+        >
+          <span className="grid h-8 w-8 place-items-center rounded-[9px] bg-brand text-on-accent shadow-[0_6px_18px_-10px_rgb(198_255_0/0.85)]">
+            <Zap className="h-4 w-4" fill="currentColor" strokeWidth={0} aria-hidden="true" />
+          </span>
+          <Wordmark className="text-[1.18rem] text-ink" />
+        </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            {navigationLinks.map((link) => (
-              <Link
-                key={link.name}
-                to={link.href}
-                className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors duration-200 relative group"
+        <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.name}
+              to={link.href}
+              aria-current={isActive(link.href) ? 'page' : undefined}
+              className={`relative rounded-full px-3.5 py-1.5 text-[0.875rem] font-medium transition-colors ${
+                isActive(link.href)
+                  ? 'text-ink'
+                  : 'text-ink-muted hover:bg-white/[0.04] hover:text-ink'
+              }`}
+            >
+              {link.name}
+              {isActive(link.href) && (
+                <span
+                  className="absolute inset-x-3.5 bottom-0 h-px bg-brand"
+                  aria-hidden="true"
+                />
+              )}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="hidden items-center gap-2 lg:flex">
+          {isAuthenticated && user ? (
+            <div className="relative" ref={accountRef}>
+              <button
+                type="button"
+                onClick={() => setAccountOpen((open) => !open)}
+                aria-expanded={accountOpen}
+                aria-haspopup="menu"
+                className="flex items-center gap-2 rounded-full border border-line bg-surface py-1 pl-1 pr-2.5 text-left transition-colors hover:border-line-strong"
               >
-                {link.icon && <link.icon className="w-4 h-4" />}
-                <span className="font-medium">{link.name}</span>
-                <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300"></div>
-              </Link>
-            ))}
-          </nav>
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-soft text-[0.7rem] font-bold text-brand-soft-ink">
+                  {initials}
+                </span>
+                <span className="max-w-[8.5rem] truncate text-sm font-medium text-ink">
+                  {user.name}
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 text-ink-subtle transition-transform ${accountOpen ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
+                />
+              </button>
 
-          {/* Desktop Auth Section */}
-          <div className="hidden md:flex items-center space-x-4">
-            {isAuthenticated && user ? (
-              <div className="flex items-center space-x-4">
-                {/* Notifications */}
-                <button className="relative p-2 text-gray-400 hover:text-white transition-colors duration-200">
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
-                    <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-                  </span>
-                </button>
-
-                {/* User Menu */}
-                <div className="relative">
-                  <button
-                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center space-x-3 p-2 rounded-lg hover:bg-white/5 transition-colors duration-200"
+              <AnimatePresence>
+                {accountOpen && (
+                  <motion.div
+                    role="menu"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-60 overflow-hidden rounded-card border border-line bg-surface p-1.5 shadow-card-hover"
                   >
-                    <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-white" />
+                    <div className="px-3 py-2.5">
+                      <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
+                      <p className="truncate text-xs text-ink-subtle">{user.email}</p>
+                      <p className="mt-2 inline-flex rounded-full border border-brand/30 bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand-soft-ink">
+                        {user.membershipLevel} plan
+                      </p>
                     </div>
-                    <div className="text-left">
-                      <div className="text-sm font-medium text-white">{user.name}</div>
-                      <div className="text-xs text-gray-400">{user.membershipLevel}</div>
-                    </div>
-                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {/* User Dropdown */}
-                  <AnimatePresence>
-                    {isUserMenuOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute right-0 mt-2 w-56 modern-card py-2 shadow-xl"
+                    <div className="my-1 h-px bg-line" />
+                    {ACCOUNT_LINKS.map((item) => (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        role="menuitem"
+                        className="flex items-center gap-2.5 rounded-control px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
                       >
-                        {userMenuItems.map((item) => (
-                          <Link
-                            key={item.name}
-                            to={item.href}
-                            onClick={() => setIsUserMenuOpen(false)}
-                            className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors duration-200"
-                          >
-                            <item.icon className="w-4 h-4" />
-                            <span>{item.name}</span>
-                          </Link>
-                        ))}
-                        <hr className="my-2 border-white/10" />
-                        <button
-                          onClick={handleLogout}
-                          className="flex items-center space-x-3 w-full px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors duration-200"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          <span>Logout</span>
-                        </button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/login')}
-                >
-                  Login
-                </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => navigate('/signup')}
-                >
-                  Sign Up
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 text-gray-400 hover:text-white transition-colors duration-200"
-          >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+                        <item.icon className="h-4 w-4" aria-hidden="true" />
+                        {item.name}
+                      </Link>
+                    ))}
+                    <div className="my-1 h-px bg-line" />
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-2.5 rounded-control px-3 py-2 text-sm text-error-ink transition-colors hover:bg-error-soft"
+                    >
+                      <LogOut className="h-4 w-4" aria-hidden="true" />
+                      Sign out
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <>
+              <ButtonLink to="/login" variant="ghost" size="sm">
+                Sign in
+              </ButtonLink>
+              <ButtonLink to="/signup" variant="primary" size="sm">
+                Get started
+              </ButtonLink>
+            </>
+          )}
         </div>
+
+        <button
+          type="button"
+          className="grid h-9 w-9 place-items-center rounded-full border border-line text-ink transition-colors hover:bg-surface-muted lg:hidden"
+          onClick={() => setMobileOpen((open) => !open)}
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-navigation"
+          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+        >
+          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
       </div>
 
-      {/* Mobile Menu */}
       <AnimatePresence>
-        {isMobileMenuOpen && (
+        {mobileOpen && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-            className="md:hidden bg-gray-900/95 backdrop-blur-md border-t border-white/10"
+            id="mobile-navigation"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden border-t border-line bg-canvas lg:hidden"
           >
-            <div className="px-4 py-6 space-y-4">
-              {/* Mobile Navigation Links */}
-              {navigationLinks.map((link) => (
-                <Link
-                  key={link.name}
-                  to={link.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center space-x-3 text-gray-300 hover:text-white transition-colors duration-200 py-2"
-                >
-                  {link.icon && <link.icon className="w-5 h-5" />}
-                  <span className="font-medium">{link.name}</span>
-                </Link>
-              ))}
+            <div className="mx-auto max-w-[1280px] px-4 py-5 sm:px-6">
+              <nav className="flex flex-col" aria-label="Mobile">
+                {NAV_LINKS.map((link) => (
+                  <Link
+                    key={link.name}
+                    to={link.href}
+                    className={`border-b border-line/70 py-3.5 text-[0.95rem] font-medium transition-colors ${
+                      isActive(link.href) ? 'text-brand' : 'text-ink-muted hover:text-ink'
+                    }`}
+                  >
+                    {link.name}
+                  </Link>
+                ))}
+              </nav>
 
-              <hr className="border-white/10" />
-
-              {/* Mobile Auth Section */}
               {isAuthenticated && user ? (
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3 py-2">
-                    <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
-                      <User className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-white">{user.name}</div>
-                      <div className="text-xs text-gray-400">{user.membershipLevel}</div>
+                <div className="mt-5">
+                  <div className="mb-4 flex items-center gap-3">
+                    <span className="grid h-10 w-10 place-items-center rounded-full bg-brand-soft text-sm font-bold text-brand-soft-ink">
+                      {initials}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
+                      <p className="truncate text-xs text-ink-subtle">
+                        {user.membershipLevel} plan
+                      </p>
                     </div>
                   </div>
-
-                  {userMenuItems.map((item) => (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center space-x-3 text-gray-300 hover:text-white transition-colors duration-200 py-2"
-                    >
-                      <item.icon className="w-5 h-5" />
-                      <span>{item.name}</span>
-                    </Link>
-                  ))}
-
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center space-x-3 text-red-400 hover:text-red-300 transition-colors duration-200 py-2"
-                  >
-                    <LogOut className="w-5 h-5" />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    {ACCOUNT_LINKS.map((item) => (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        className="flex items-center gap-2 rounded-control border border-line bg-surface px-3 py-2.5 text-sm text-ink-muted"
+                      >
+                        <item.icon className="h-4 w-4" aria-hidden="true" />
+                        {item.name}
+                      </Link>
+                    ))}
+                  </div>
                   <Button
                     variant="ghost"
-                    onClick={() => {
-                      navigate('/login');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full justify-center"
+                    size="md"
+                    fullWidth
+                    className="mt-3"
+                    leftIcon={<LogOut className="h-4 w-4" />}
+                    onClick={handleLogout}
                   >
-                    Login
+                    Sign out
                   </Button>
-                  <Button
-                    variant="primary"
-                    onClick={() => {
-                      navigate('/signup');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full justify-center"
-                  >
-                    Sign Up
-                  </Button>
+                </div>
+              ) : (
+                <div className="mt-5 grid grid-cols-2 gap-2">
+                  <ButtonLink to="/login" variant="ghost" size="md" fullWidth>
+                    Sign in
+                  </ButtonLink>
+                  <ButtonLink to="/signup" variant="primary" size="md" fullWidth>
+                    Get started
+                  </ButtonLink>
                 </div>
               )}
             </div>

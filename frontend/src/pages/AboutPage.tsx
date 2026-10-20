@@ -48,43 +48,41 @@ const AboutPage: React.FC = () => {
     {
       name: 'Sarah Johnson',
       role: 'CEO & Co-Founder',
-      image: 'https://images.unsplash.com/photo-1494790108755-2616b612b192?w=400&h=400&fit=crop&crop=face',
       bio: 'Former Tesla engineer with 10+ years in EV technology.'
     },
     {
       name: 'Michael Chen',
       role: 'CTO & Co-Founder',
-      image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face',
       bio: 'Tech visionary focused on sustainable transportation solutions.'
     },
     {
       name: 'Emily Rodriguez',
       role: 'Head of Operations',
-      image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face',
       bio: 'Operations expert ensuring seamless charging experiences.'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-canvas">
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <section className="relative overflow-hidden border-b border-line bg-deep text-deep-ink">
+        <div className="ev-grid ev-grid--center" aria-hidden="true" />
+        <div className="relative mx-auto max-w-[1280px] px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="text-center"
           >
-            <div className="flex justify-center mb-6">
-              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center">
-                <Zap className="w-10 h-10 text-white" />
+            <div className="mb-4 flex justify-center">
+              <div className="grid h-11 w-11 place-items-center rounded-full border border-brand/25 bg-brand-soft">
+                <Zap className="h-5 w-5 text-brand" />
               </div>
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
+            <h1 className="ev-display mx-auto max-w-[16ch] text-deep-ink">
               About ChargeEase
             </h1>
-            <p className="text-xl md:text-2xl text-orange-100 max-w-3xl mx-auto">
+            <p className="mx-auto mt-4 max-w-2xl text-[0.95rem] leading-relaxed text-deep-ink-muted sm:text-base">
               Making electric vehicle charging simple, accessible, and reliable for everyone.
             </p>
           </motion.div>
@@ -92,23 +90,23 @@ const AboutPage: React.FC = () => {
       </section>
 
       {/* Mission Section */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <section className="py-11 lg:py-14">
+        <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 items-center gap-9 lg:grid-cols-2 lg:gap-12">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">
+              <h2 className="ev-title mb-3 text-ink">
                 Our Mission
               </h2>
-              <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
+              <p className="mb-3 text-[0.95rem] leading-relaxed text-ink-muted">
                 We believe that electric vehicle adoption should be effortless. Our mission is to 
                 eliminate range anxiety by providing the most comprehensive, user-friendly platform
                 for finding and booking charging stations.
               </p>
-              <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
+              <p className="mb-6 text-[0.95rem] leading-relaxed text-ink-muted">
                 By connecting EV drivers with reliable charging infrastructure, we're accelerating 
                 the transition to sustainable transportation and helping create a cleaner future for all.
               </p>
@@ -128,14 +126,14 @@ const AboutPage: React.FC = () => {
               className="relative"
             >
               <img
-                src="https://images.unsplash.com/photo-1593941707882-a5bac6861d75?w=600&h=400&fit=crop"
+                src="/assets/charging-hardware.jpg"
                 alt="Electric vehicle charging"
-                className="rounded-lg shadow-lg"
+                className="aspect-[3/2] w-full rounded-card border border-line object-cover shadow-card"
               />
-              <div className="absolute -bottom-6 -right-6 bg-orange-500 text-white p-6 rounded-lg shadow-lg">
+              <div className="absolute -bottom-4 right-2 rounded-card bg-brand p-4 text-on-accent shadow-lg sm:-right-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold">5★</div>
-                  <div className="text-sm">User Rating</div>
+                  <div className="ev-figure text-2xl">5★</div>
+                  <div className="text-xs font-medium">User Rating</div>
                 </div>
               </div>
             </motion.div>
@@ -144,22 +142,22 @@ const AboutPage: React.FC = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-white dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="border-y border-line bg-surface-muted py-11 lg:py-14">
+        <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-16"
+            className="mb-9 text-center"
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            <h2 className="ev-title mb-2 text-ink">
               By the Numbers
             </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            <p className="mx-auto max-w-2xl text-[0.95rem] text-ink-muted">
               Our platform continues to grow, connecting more EV drivers with charging solutions every day.
             </p>
           </motion.div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
             {stats.map((stat, index) => {
               const Icon = stat.icon;
               return (
@@ -170,13 +168,13 @@ const AboutPage: React.FC = () => {
                   transition={{ duration: 0.6, delay: index * 0.1 }}
                   className="text-center"
                 >
-                  <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Icon className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+                  <div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-full border border-brand/20 bg-brand-soft">
+                    <Icon className="h-5 w-5 text-brand" />
                   </div>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                  <div className="ev-figure mb-1 text-[2rem] text-ink">
                     {stat.value}
                   </div>
-                  <div className="text-gray-600 dark:text-gray-400">
+                  <div className="text-sm text-ink-muted">
                     {stat.label}
                   </div>
                 </motion.div>
@@ -187,22 +185,22 @@ const AboutPage: React.FC = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-11 lg:py-14">
+        <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-16"
+            className="mb-9 text-center"
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            <h2 className="ev-title mb-2 text-ink">
               Why Choose ChargeEase?
             </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            <p className="mx-auto max-w-2xl text-[0.95rem] text-ink-muted">
               We've built the most comprehensive and user-friendly EV charging platform.
             </p>
           </motion.div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
@@ -211,15 +209,15 @@ const AboutPage: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                                    animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center"
+                  className="rounded-card border border-line bg-surface p-5 text-center shadow-card"
                 >
-                  <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <Icon className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                  <div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-full border border-brand/20 bg-brand-soft">
+                    <Icon className="h-5 w-5 text-brand" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  <h3 className="ev-card-title mb-1.5 text-ink">
                     {feature.title}
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-[0.8125rem] leading-relaxed text-ink-muted">
                     {feature.description}
                   </p>
                 </motion.div>
@@ -230,42 +228,46 @@ const AboutPage: React.FC = () => {
       </section>
 
       {/* Team Section */}
-      <section className="py-20 bg-white dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="border-y border-line bg-surface-muted py-11 lg:py-14">
+        <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-16"
+            className="mb-9 text-center"
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            <h2 className="ev-title mb-2 text-ink">
               Meet Our Team
             </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            <p className="mx-auto max-w-2xl text-[0.95rem] text-ink-muted">
               We're a passionate team of engineers, designers, and EV enthusiasts.
             </p>
           </motion.div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {team.map((member, index) => (
               <motion.div
                 key={member.name}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center"
+                className="rounded-card border border-line bg-surface p-5 text-center"
               >
-                <img
-                  src={member.image}
-                  alt={member.name}
-                  className="w-24 h-24 rounded-full mx-auto mb-4 object-cover"
-                />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                <div
+                  aria-hidden="true"
+                  className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full border border-brand/20 bg-brand-soft text-xl font-semibold text-brand"
+                >
+                  {member.name
+                    .split(' ')
+                    .map((part) => part.charAt(0))
+                    .join('')}
+                </div>
+                <h3 className="ev-card-title mb-0.5 text-ink">
                   {member.name}
                 </h3>
-                <p className="text-orange-600 dark:text-orange-400 font-medium mb-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.1em] text-brand">
                   {member.role}
                 </p>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                <p className="text-[0.8125rem] leading-relaxed text-ink-muted">
                   {member.bio}
                 </p>
               </motion.div>
@@ -275,30 +277,29 @@ const AboutPage: React.FC = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-orange-500 to-orange-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <section className="py-11 lg:py-14">
+        <div className="mx-auto max-w-[1280px] px-4 text-center sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="ev-title mb-2 text-ink">
               Ready to Start Your EV Journey?
             </h2>
-            <p className="text-xl text-orange-100 mb-8 max-w-2xl mx-auto">
+            <p className="mx-auto mb-7 max-w-2xl text-[0.95rem] text-ink-muted">
               Join thousands of EV drivers who trust ChargeEase for their charging needs.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col justify-center gap-2.5 sm:flex-row">
               <Button
                 size="lg"
-                className="bg-white text-orange-600 hover:bg-gray-100"
+                className="bg-brand text-on-accent hover:bg-brand-strong"
               >
                 Find Charging Stations
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="border-white text-white hover:bg-white hover:text-orange-600"
               >
                 Download App
               </Button>

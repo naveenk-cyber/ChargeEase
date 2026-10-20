@@ -396,15 +396,15 @@ const WalletPage: React.FC = () => {
                         <motion.div
                           key={transaction.id}
                           whileHover={{ scale: 1.01 }}
-                          className="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                          className="flex items-center justify-between gap-3 min-w-0 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
                         >
-                          <div className="flex items-center space-x-4">
-                            <div className={`w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center ${colorClass}`}>
+                          <div className="flex items-center space-x-4 min-w-0 flex-1">
+                            <div className={`w-10 h-10 shrink-0 rounded-lg bg-white/10 flex items-center justify-center ${colorClass}`}>
                               <Icon className="w-5 h-5" />
                             </div>
-                            <div>
-                              <p className="font-medium text-white">{transaction.description}</p>
-                              <div className="flex items-center space-x-2 text-sm text-gray-400">
+                            <div className="min-w-0">
+                              <p className="font-medium text-white truncate">{transaction.description}</p>
+                              <div className="flex flex-wrap items-center gap-x-2 text-sm text-gray-400">
                                 <span>{transaction.date.toLocaleDateString()}</span>
                                 {transaction.location && (
                                   <>
@@ -421,7 +421,7 @@ const WalletPage: React.FC = () => {
                               </div>
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right shrink-0">
                             <p className={`font-semibold ${
                               transaction.amount > 0 ? 'text-green-400' : 'text-white'
                             }`}>
@@ -512,15 +512,15 @@ const WalletPage: React.FC = () => {
                         <motion.div
                           key={transaction.id}
                           whileHover={{ scale: 1.01 }}
-                          className="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                          className="flex items-center justify-between gap-3 min-w-0 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
                         >
-                          <div className="flex items-center space-x-4">
-                            <div className={`w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center ${colorClass}`}>
+                          <div className="flex items-center space-x-4 min-w-0 flex-1">
+                            <div className={`w-10 h-10 shrink-0 rounded-lg bg-white/10 flex items-center justify-center ${colorClass}`}>
                               <Icon className="w-5 h-5" />
                             </div>
-                            <div>
-                              <p className="font-medium text-white">{transaction.description}</p>
-                              <div className="flex items-center space-x-2 text-sm text-gray-400">
+                            <div className="min-w-0">
+                              <p className="font-medium text-white truncate">{transaction.description}</p>
+                              <div className="flex flex-wrap items-center gap-x-2 text-sm text-gray-400">
                                 <span>{transaction.date.toLocaleDateString()} at {transaction.date.toLocaleTimeString()}</span>
                                 {transaction.location && (
                                   <>
@@ -542,7 +542,7 @@ const WalletPage: React.FC = () => {
                               )}
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right shrink-0">
                             <p className={`font-semibold ${
                               transaction.amount > 0 ? 'text-green-400' : 'text-white'
                             }`}>

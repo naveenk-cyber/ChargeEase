@@ -1,9 +1,17 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { User, LoginForm, SignupForm } from '../types';
-// import { authService, userService } from '../services/api';
+import { createContext, useContext, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import type { LoginForm, SignupForm, User } from '../types';
 import { storage } from '../utils/helpers';
-import { STORAGE_KEYS, SUCCESS_MESSAGES } from '../utils/constants';
+
+/**
+ * Demo authentication.
+ *
+ * There is no credential exchange in this build: signing in creates a local
+ * session so the account areas are explorable. Nothing is sent anywhere and no
+ * password is stored. The UI says so on the sign-in screen.
+ */
+const AUTH_TOKEN_KEY = 'chargeease_auth_token';
+const USER_DATA_KEY = 'chargeease_user_data';
 
 interface AuthContextType {
   user: User | null;
@@ -25,72 +33,76 @@ export const useAuth = () => {
   return context;
 };
 
+function displayNameFrom(email: string): string {
+  const local = email.split('@')[0]?.replace(/[._-]+/g, ' ').trim();
+  if (!local) return 'Demo Driver';
+  return local
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function createUser(overrides: Partial<User> & Pick<User, 'email' | 'name'>): User {
+  return {
+    id: `demo-${Date.now()}`,
+    phone: '',
+    avatar: undefined,
+    vehicles: [],
+    membershipLevel: 'Free',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    preferences: {
+      units: 'imperial',
+      language: 'en',
+      notifications: { email: true, push: false, sms: false },
+    },
+    ...overrides,
+  };
+}
+
+function readSession(): { user: User | null; token: string | null } {
+  return {
+    user: storage.get<User>(USER_DATA_KEY),
+    token: storage.get<string>(AUTH_TOKEN_KEY),
+  };
+}
+
 export const useAuthProvider = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Restore the session during the first render. Reading it in an effect made
+  // the protected routes render as signed-out for one frame, so a refresh on
+  // /dashboard (or /wallet) could bounce the driver to /login before the
+  // stored session was applied.
+  const [initialSession] = useState(readSession);
+  const [user, setUser] = useState<User | null>(
+    initialSession.user && initialSession.token ? initialSession.user : null,
+  );
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    Boolean(initialSession.user && initialSession.token),
+  );
   const [isLoading, setIsLoading] = useState(false);
   const queryClient = useQueryClient();
 
-  // Check for existing session on app start
-  useEffect(() => {
-    const savedUser = storage.get<User>(STORAGE_KEYS.USER_DATA);
-    const token = storage.get<string>(STORAGE_KEYS.AUTH_TOKEN);
-    
-    if (savedUser && token) {
-      setUser(savedUser);
-      setIsAuthenticated(true);
-    }
-  }, []);
+  const persist = (nextUser: User) => {
+    storage.set(AUTH_TOKEN_KEY, `demo-session-${Date.now()}`);
+    storage.set(USER_DATA_KEY, nextUser);
+    setUser(nextUser);
+    setIsAuthenticated(true);
+  };
 
   const login = async (credentials: LoginForm) => {
     setIsLoading(true);
     try {
-      // MOCK LOGIN - Replace with actual API call when backend is ready
-      /*
-      // Real implementation when backend is ready:
-      const response = await authService.login(credentials);
-      const { user, token } = response;
-      storage.set(STORAGE_KEYS.AUTH_TOKEN, token);
-      storage.set(STORAGE_KEYS.USER_DATA, user);
-      setUser(user);
-      setIsAuthenticated(true);
-      */
-      
-      // Mock implementation for frontend testing
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
-      
-      const mockUser: User = {
-        id: '1',
-        name: 'John Doe',
-        email: credentials.email,
-        phone: '+1 (555) 123-4567',
-        avatar: null,
-        membershipLevel: 'Premium',
-        createdAt: new Date().toISOString(),
-        vehicles: [],
-        preferences: {
-          units: 'imperial',
-          notifications: {
-            email: true,
-            push: true,
-            sms: false
-          }
-        }
-      };
-      
-      const mockToken = 'mock_jwt_token_' + Date.now();
-      
-      // Save to localStorage for persistence
-      storage.set(STORAGE_KEYS.AUTH_TOKEN, mockToken);
-      storage.set(STORAGE_KEYS.USER_DATA, mockUser);
-      
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      
-      console.log('Mock login successful:', { user: mockUser, token: mockToken });
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw new Error('Invalid email or password');
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      persist(
+        createUser({
+          email: credentials.email,
+          name: displayNameFrom(credentials.email),
+          membershipLevel: 'Free',
+        }),
+      );
+    } catch {
+      throw new Error('We could not start a demo session. Try again.');
     } finally {
       setIsLoading(false);
     }
@@ -99,52 +111,31 @@ export const useAuthProvider = () => {
   const signup = async (userData: SignupForm) => {
     setIsLoading(true);
     try {
-      // MOCK SIGNUP - Replace with actual API call when backend is ready
-      /*
-      // Real implementation when backend is ready:
-      const response = await authService.signup(userData);
-      const { user, token } = response;
-      storage.set(STORAGE_KEYS.AUTH_TOKEN, token);
-      storage.set(STORAGE_KEYS.USER_DATA, user);
-      setUser(user);
-      setIsAuthenticated(true);
-      */
-      
-      // Mock implementation for frontend testing
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API delay
-      
-      const mockUser: User = {
-        id: '2',
-        name: `${userData.firstName} ${userData.lastName}`,
-        email: userData.email,
-        phone: userData.phone || '',
-        avatar: null,
-        membershipLevel: 'Basic',
-        createdAt: new Date().toISOString(),
-        vehicles: [],
-        preferences: {
-          units: 'imperial',
-          notifications: {
-            email: true,
-            push: userData.newsletter || false,
-            sms: false
-          }
-        }
-      };
-      
-      const mockToken = 'mock_jwt_token_' + Date.now();
-      
-      // Save to localStorage for persistence
-      storage.set(STORAGE_KEYS.AUTH_TOKEN, mockToken);
-      storage.set(STORAGE_KEYS.USER_DATA, mockUser);
-      
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      
-      console.log('Mock signup successful:', { user: mockUser, token: mockToken });
-    } catch (error) {
-      console.error('Signup failed:', error);
-      throw new Error('Failed to create account');
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      const name =
+        userData.name?.trim() ||
+        [userData.firstName, userData.lastName].filter(Boolean).join(' ').trim() ||
+        displayNameFrom(userData.email);
+
+      persist(
+        createUser({
+          email: userData.email,
+          name: name || 'Demo Driver',
+          phone: userData.phone || '',
+          membershipLevel: 'Free',
+          preferences: {
+            units: 'imperial',
+            language: 'en',
+            notifications: {
+              email: true,
+              push: Boolean(userData.newsletter),
+              sms: false,
+            },
+          },
+        }),
+      );
+    } catch {
+      throw new Error('We could not create the demo account. Try again.');
     } finally {
       setIsLoading(false);
     }
@@ -153,28 +144,12 @@ export const useAuthProvider = () => {
   const logout = async () => {
     setIsLoading(true);
     try {
-      // MOCK LOGOUT - Replace with actual API call when backend is ready
-      /*
-      // Real implementation when backend is ready:
-      await authService.logout();
-      */
-      
-      // Mock implementation
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Clear storage
-      storage.remove(STORAGE_KEYS.AUTH_TOKEN);
-      storage.remove(STORAGE_KEYS.USER_DATA);
-      
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      storage.remove(AUTH_TOKEN_KEY);
+      storage.remove(USER_DATA_KEY);
       setUser(null);
       setIsAuthenticated(false);
-      
-      // Clear query cache
       queryClient.clear();
-      
-      console.log('Mock logout successful');
-    } catch (error) {
-      console.error('Logout failed:', error);
     } finally {
       setIsLoading(false);
     }
@@ -182,33 +157,8 @@ export const useAuthProvider = () => {
 
   const refreshUser = async () => {
     if (!isAuthenticated) return;
-    
-    setIsLoading(true);
-    try {
-      // MOCK REFRESH - Replace with actual API call when backend is ready
-      /*
-      // Real implementation when backend is ready:
-      const updatedUser = await userService.getProfile();
-      setUser(updatedUser);
-      storage.set(STORAGE_KEYS.USER_DATA, updatedUser);
-      */
-      
-      // Mock implementation
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      const currentUser = storage.get<User>(STORAGE_KEYS.USER_DATA);
-      if (currentUser) {
-        setUser(currentUser);
-      }
-      
-      console.log('Mock user refresh successful');
-    } catch (error) {
-      console.error('Failed to refresh user:', error);
-      // If refresh fails, logout user
-      await logout();
-    } finally {
-      setIsLoading(false);
-    }
+    const currentUser = storage.get<User>(USER_DATA_KEY);
+    if (currentUser) setUser(currentUser);
   };
 
   return {
@@ -228,10 +178,5 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const auth = useAuthProvider();
-
-  return (
-    <AuthContext.Provider value={auth}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
 };

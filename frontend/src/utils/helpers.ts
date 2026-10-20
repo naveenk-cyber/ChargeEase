@@ -4,7 +4,7 @@ import { ChargingStation, SearchFilters } from '../types';
 export const formatDate = (date: string | Date, format = 'medium'): string => {
   const d = new Date(date);
   
-  const options: Intl.DateTimeFormatOptions = {
+  const formats: Record<string, Intl.DateTimeFormatOptions> = {
     short: { month: 'short', day: 'numeric' },
     medium: { month: 'short', day: 'numeric', year: 'numeric' },
     long: { month: 'long', day: 'numeric', year: 'numeric' },
@@ -15,9 +15,11 @@ export const formatDate = (date: string | Date, format = 'medium'): string => {
       year: 'numeric', 
       hour: 'numeric', 
       minute: '2-digit', 
-      hour12: true 
-    }
-  }[format] || { month: 'short', day: 'numeric', year: 'numeric' };
+      hour12: true,
+    },
+  };
+
+  const options = formats[format] ?? { month: 'short', day: 'numeric', year: 'numeric' };
 
   return d.toLocaleDateString('en-US', options);
 };
@@ -67,7 +69,7 @@ const deg2rad = (deg: number): number => {
 
 export const formatDistance = (
   distance: number, 
-  unit: 'miles' | 'km' = 'miles'
+  _unit: 'miles' | 'km' = 'miles'
 ): string => {
   if (distance < 0.1) return '<0.1';
   if (distance < 1) return distance.toFixed(1);
@@ -326,7 +328,7 @@ export const filterStations = (
     // Filter by connector types
     if (filters.connectorTypes && filters.connectorTypes.length > 0) {
       const stationConnectors = station.connectorTypes.map(c => c.type);
-      if (!filters.connectorTypes.some(type => stationConnectors.includes(type))) {
+      if (!filters.connectorTypes.some(type => stationConnectors.includes(type as ChargingStation['connectorTypes'][number]['type']))) {
         return false;
       }
     }
@@ -369,7 +371,7 @@ export const debounce = <T extends (...args: any[]) => any>(
   func: T,
   delay: number
 ): (...args: Parameters<T>) => void => {
-  let timeoutId: NodeJS.Timeout;
+  let timeoutId: ReturnType<typeof setTimeout>;
   
   return (...args: Parameters<T>) => {
     clearTimeout(timeoutId);
